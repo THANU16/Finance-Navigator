@@ -13,8 +13,14 @@ import Register from "@/pages/auth/register";
 import ForgotPassword from "@/pages/auth/forgot-password";
 import Dashboard from "@/pages/dashboard";
 import Portfolio from "@/pages/portfolio";
+import AssetDetail from "@/pages/portfolio/asset-detail";
 import Accounts from "@/pages/accounts";
 import Transactions from "@/pages/transactions";
+import Performance from "@/pages/performance";
+import Rebalancing from "@/pages/rebalancing";
+import SipPlanner from "@/pages/sip";
+import OpportunityFund from "@/pages/opportunity";
+import Settings from "@/pages/settings";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,23 +35,21 @@ setAuthTokenGetter(() => {
   return getAuthToken();
 });
 
-function DummyPage({ title }: { title: string }) {
-  return <div className="p-8"><h1 className="text-2xl font-bold">{title}</h1><p>Building...</p></div>;
-}
-
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
       <Route path="/forgot-password" component={ForgotPassword} />
-      
-      {/* Protected Routes */}
+
       <Route path="/">
         <AppLayout><Dashboard /></AppLayout>
       </Route>
       <Route path="/portfolio">
         <AppLayout><Portfolio /></AppLayout>
+      </Route>
+      <Route path="/assets/:id">
+        <AppLayout><AssetDetail /></AppLayout>
       </Route>
       <Route path="/accounts">
         <AppLayout><Accounts /></AppLayout>
@@ -54,21 +58,21 @@ function Router() {
         <AppLayout><Transactions /></AppLayout>
       </Route>
       <Route path="/performance">
-        <AppLayout><DummyPage title="Performance" /></AppLayout>
+        <AppLayout><Performance /></AppLayout>
       </Route>
       <Route path="/rebalancing">
-        <AppLayout><DummyPage title="Rebalancing" /></AppLayout>
+        <AppLayout><Rebalancing /></AppLayout>
       </Route>
       <Route path="/sip">
-        <AppLayout><DummyPage title="SIP Planner" /></AppLayout>
+        <AppLayout><SipPlanner /></AppLayout>
       </Route>
       <Route path="/opportunity">
-        <AppLayout><DummyPage title="Opportunity Fund" /></AppLayout>
+        <AppLayout><OpportunityFund /></AppLayout>
       </Route>
       <Route path="/settings">
-        <AppLayout><DummyPage title="Settings" /></AppLayout>
+        <AppLayout><Settings /></AppLayout>
       </Route>
-      
+
       <Route component={NotFound} />
     </Switch>
   );
