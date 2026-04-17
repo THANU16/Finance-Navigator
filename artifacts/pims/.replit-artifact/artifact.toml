@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Personal Investment Management System"
+version = "1.0.0"
+id = "artifacts/pims"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25033
+
+[services.development]
+run = "pnpm --filter @workspace/pims run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/pims", "run", "build" ]
+publicDir = "artifacts/pims/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25033"
+BASE_PATH = "/"

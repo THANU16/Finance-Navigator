@@ -1,22 +1,43 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Personal Investment Management System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: assets
+    description: Asset management
+  - name: transactions
+    description: Transaction management
+  - name: accounts
+    description: Cash account management
+  - name: sip
+    description: SIP planner
+  - name: settings
+    description: System settings
+  - name: analytics
+    description: Performance analytics
+  - name: dashboard
+    description: Dashboard summary
+  - name: rebalancing
+    description: Rebalancing operations
+  - name: opportunity
+    description: Opportunity fund operations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +45,770 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # Auth
+  /auth/register:
+    post:
+      operationId: registerUser
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: loginUser
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logoutUser
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Send password reset OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordBody"
+      responses:
+        "200":
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordBody"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # Dashboard
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/alerts:
+    get:
+      operationId: getDashboardAlerts
+      tags: [dashboard]
+      summary: Get active alerts
+      responses:
+        "200":
+          description: List of alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+
+  # Assets
+  /assets:
+    get:
+      operationId: getAssets
+      tags: [assets]
+      summary: Get all assets for current user
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [equity_fund, debt_fund, metal, cash]
+      responses:
+        "200":
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+    post:
+      operationId: createAsset
+      tags: [assets]
+      summary: Create a new asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetBody"
+      responses:
+        "201":
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+
+  /assets/{id}:
+    get:
+      operationId: getAsset
+      tags: [assets]
+      summary: Get asset by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetDetail"
+    patch:
+      operationId: updateAsset
+      tags: [assets]
+      summary: Update an asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAssetBody"
+      responses:
+        "200":
+          description: Asset updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+    delete:
+      operationId: deleteAsset
+      tags: [assets]
+      summary: Delete an asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Asset deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /assets/{id}/valuations:
+    get:
+      operationId: getAssetValuations
+      tags: [assets]
+      summary: Get valuation history for an asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Valuations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Valuation"
+    post:
+      operationId: addAssetValuation
+      tags: [assets]
+      summary: Add a valuation snapshot for an asset
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddValuationBody"
+      responses:
+        "201":
+          description: Valuation added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Valuation"
+
+  /assets/{id}/valuations/{valuationId}:
+    patch:
+      operationId: updateAssetValuation
+      tags: [assets]
+      summary: Update a valuation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: valuationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddValuationBody"
+      responses:
+        "200":
+          description: Valuation updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Valuation"
+    delete:
+      operationId: deleteAssetValuation
+      tags: [assets]
+      summary: Delete a valuation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: valuationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # Transactions
+  /transactions:
+    get:
+      operationId: getTransactions
+      tags: [transactions]
+      summary: Get all transactions
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: assetId
+          in: query
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+    post:
+      operationId: createTransaction
+      tags: [transactions]
+      summary: Create a transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTransactionBody"
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+
+  /transactions/{id}:
+    get:
+      operationId: getTransaction
+      tags: [transactions]
+      summary: Get transaction by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    patch:
+      operationId: updateTransaction
+      tags: [transactions]
+      summary: Update a transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTransactionBody"
+      responses:
+        "200":
+          description: Transaction updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+    delete:
+      operationId: deleteTransaction
+      tags: [transactions]
+      summary: Delete a transaction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  # Accounts
+  /accounts:
+    get:
+      operationId: getAccounts
+      tags: [accounts]
+      summary: Get all cash accounts
+      responses:
+        "200":
+          description: List of accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+    post:
+      operationId: createAccount
+      tags: [accounts]
+      summary: Create a cash account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAccountBody"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+
+  /accounts/{id}:
+    patch:
+      operationId: updateAccount
+      tags: [accounts]
+      summary: Update a cash account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAccountBody"
+      responses:
+        "200":
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+    delete:
+      operationId: deleteAccount
+      tags: [accounts]
+      summary: Delete a cash account
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /accounts/summary:
+    get:
+      operationId: getAccountsSummary
+      tags: [accounts]
+      summary: Get accounts summary (cash flow)
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountsSummary"
+
+  # SIP
+  /sip:
+    get:
+      operationId: getSipConfig
+      tags: [sip]
+      summary: Get SIP configuration
+      responses:
+        "200":
+          description: SIP config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SipConfig"
+    put:
+      operationId: updateSipConfig
+      tags: [sip]
+      summary: Update SIP configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSipConfigBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SipConfig"
+
+  /sip/history:
+    get:
+      operationId: getSipHistory
+      tags: [sip]
+      summary: Get SIP execution history
+      responses:
+        "200":
+          description: SIP history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SipHistoryEntry"
+    post:
+      operationId: recordSipExecution
+      tags: [sip]
+      summary: Record a SIP execution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordSipBody"
+      responses:
+        "201":
+          description: Recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SipHistoryEntry"
+
+  # Settings
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get system settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update system settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
+  # Analytics
+  /analytics/performance:
+    get:
+      operationId: getPerformanceAnalytics
+      tags: [analytics]
+      summary: Get performance analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1m, 3m, 6m, 1y, all]
+      responses:
+        "200":
+          description: Performance analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PerformanceAnalytics"
+
+  /analytics/growth:
+    get:
+      operationId: getGrowthChart
+      tags: [analytics]
+      summary: Get portfolio growth chart data
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [1m, 3m, 6m, 1y, all]
+      responses:
+        "200":
+          description: Growth chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GrowthDataPoint"
+
+  # Rebalancing
+  /rebalancing/status:
+    get:
+      operationId: getRebalancingStatus
+      tags: [rebalancing]
+      summary: Get rebalancing status (target vs actual)
+      responses:
+        "200":
+          description: Rebalancing status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RebalancingStatus"
+
+  /rebalancing/targets:
+    put:
+      operationId: updateRebalancingTargets
+      tags: [rebalancing]
+      summary: Update target allocations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTargetsBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RebalancingStatus"
+
+  # Opportunity
+  /opportunity:
+    get:
+      operationId: getOpportunityStatus
+      tags: [opportunity]
+      summary: Get opportunity fund status
+      responses:
+        "200":
+          description: Opportunity status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OpportunityStatus"
+
+  /opportunity/deployments:
+    get:
+      operationId: getDeploymentHistory
+      tags: [opportunity]
+      summary: Get deployment history
+      responses:
+        "200":
+          description: Deployment history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Deployment"
+    post:
+      operationId: recordDeployment
+      tags: [opportunity]
+      summary: Record a crash deployment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordDeploymentBody"
+      responses:
+        "201":
+          description: Deployment recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deployment"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +819,1005 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required:
+        - message
+
+    # Auth
+    RegisterBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - name
+        - email
+        - password
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    ForgotPasswordBody:
+      type: object
+      properties:
+        email:
+          type: string
+      required:
+        - email
+
+    ResetPasswordBody:
+      type: object
+      properties:
+        email:
+          type: string
+        otp:
+          type: string
+        newPassword:
+          type: string
+      required:
+        - email
+        - otp
+        - newPassword
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - email
+        - createdAt
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+        - token
+
+    # Dashboard
+    DashboardSummary:
+      type: object
+      properties:
+        totalValue:
+          type: number
+        investedValue:
+          type: number
+        profitLoss:
+          type: number
+        profitLossPercent:
+          type: number
+        monthlyReturn:
+          type: number
+        monthlyReturnPercent:
+          type: number
+        allocationByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryAllocation"
+        emergencyFundRequired:
+          type: number
+        emergencyFundCurrent:
+          type: number
+        emergencyFundPercent:
+          type: number
+        cashAvailable:
+          type: number
+        bestCategory:
+          type: string
+        worstCategory:
+          type: string
+        riskLevel:
+          type: string
+      required:
+        - totalValue
+        - investedValue
+        - profitLoss
+        - profitLossPercent
+        - monthlyReturn
+        - monthlyReturnPercent
+        - allocationByCategory
+        - emergencyFundRequired
+        - emergencyFundCurrent
+        - emergencyFundPercent
+        - cashAvailable
+        - bestCategory
+        - worstCategory
+        - riskLevel
+
+    CategoryAllocation:
+      type: object
+      properties:
+        category:
+          type: string
+        value:
+          type: number
+        percent:
+          type: number
+        color:
+          type: string
+      required:
+        - category
+        - value
+        - percent
+        - color
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - message
+        - severity
+        - createdAt
+
+    # Assets
+    Asset:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+          enum: [equity_fund, debt_fund, metal, cash]
+        subCategory:
+          type: ["string", "null"]
+        currentValue:
+          type: number
+        investedValue:
+          type: number
+        units:
+          type: ["number", "null"]
+        nav:
+          type: ["number", "null"]
+        pricePerUnit:
+          type: ["number", "null"]
+        profitLoss:
+          type: number
+        profitLossPercent:
+          type: number
+        targetPercent:
+          type: number
+        actualPercent:
+          type: number
+        currency:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - category
+        - currentValue
+        - investedValue
+        - profitLoss
+        - profitLossPercent
+        - targetPercent
+        - actualPercent
+        - currency
+        - isActive
+        - createdAt
+        - updatedAt
+
+    AssetDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        subCategory:
+          type: ["string", "null"]
+        currentValue:
+          type: number
+        investedValue:
+          type: number
+        units:
+          type: ["number", "null"]
+        nav:
+          type: ["number", "null"]
+        pricePerUnit:
+          type: ["number", "null"]
+        profitLoss:
+          type: number
+        profitLossPercent:
+          type: number
+        targetPercent:
+          type: number
+        actualPercent:
+          type: number
+        currency:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        valuations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Valuation"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+      required:
+        - id
+        - name
+        - category
+        - currentValue
+        - investedValue
+        - profitLoss
+        - profitLossPercent
+        - targetPercent
+        - actualPercent
+        - currency
+        - isActive
+        - createdAt
+        - updatedAt
+        - valuations
+        - transactions
+
+    CreateAssetBody:
+      type: object
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [equity_fund, debt_fund, metal, cash]
+        subCategory:
+          type: ["string", "null"]
+        units:
+          type: ["number", "null"]
+        nav:
+          type: ["number", "null"]
+        pricePerUnit:
+          type: ["number", "null"]
+        investedValue:
+          type: number
+        targetPercent:
+          type: number
+        currency:
+          type: string
+      required:
+        - name
+        - category
+        - investedValue
+        - targetPercent
+        - currency
+
+    UpdateAssetBody:
+      type: object
+      properties:
+        name:
+          type: string
+        units:
+          type: ["number", "null"]
+        nav:
+          type: ["number", "null"]
+        pricePerUnit:
+          type: ["number", "null"]
+        investedValue:
+          type: number
+        targetPercent:
+          type: number
+        isActive:
+          type: boolean
+
+    Valuation:
+      type: object
+      properties:
+        id:
+          type: integer
+        assetId:
+          type: integer
+        value:
+          type: number
+        units:
+          type: ["number", "null"]
+        nav:
+          type: ["number", "null"]
+        pricePerUnit:
+          type: ["number", "null"]
+        date:
+          type: string
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - assetId
+        - value
+        - date
+        - createdAt
+
+    AddValuationBody:
+      type: object
+      properties:
+        value:
+          type: number
+        units:
+          type: ["number", "null"]
+        nav:
+          type: ["number", "null"]
+        pricePerUnit:
+          type: ["number", "null"]
+        date:
+          type: string
+        note:
+          type: ["string", "null"]
+      required:
+        - value
+        - date
+
+    # Transactions
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [deposit, withdrawal, transfer, invest, redeem, tag_allocation, sip]
+        amount:
+          type: number
+        assetId:
+          type: ["integer", "null"]
+        assetName:
+          type: ["string", "null"]
+        sourceAccountId:
+          type: ["integer", "null"]
+        destinationAccountId:
+          type: ["integer", "null"]
+        date:
+          type: string
+        tag:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - type
+        - amount
+        - date
+        - createdAt
+
+    CreateTransactionBody:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [deposit, withdrawal, transfer, invest, redeem, tag_allocation, sip]
+        amount:
+          type: number
+        assetId:
+          type: ["integer", "null"]
+        sourceAccountId:
+          type: ["integer", "null"]
+        destinationAccountId:
+          type: ["integer", "null"]
+        date:
+          type: string
+        tag:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+      required:
+        - type
+        - amount
+        - date
+
+    UpdateTransactionBody:
+      type: object
+      properties:
+        type:
+          type: string
+        amount:
+          type: number
+        assetId:
+          type: ["integer", "null"]
+        sourceAccountId:
+          type: ["integer", "null"]
+        destinationAccountId:
+          type: ["integer", "null"]
+        date:
+          type: string
+        tag:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+
+    # Accounts
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [bank, money_market, cash]
+        tag:
+          type: string
+          enum: [emergency, opportunity, free]
+        balance:
+          type: number
+        currency:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - tag
+        - balance
+        - currency
+        - isActive
+        - createdAt
+        - updatedAt
+
+    CreateAccountBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [bank, money_market, cash]
+        tag:
+          type: string
+          enum: [emergency, opportunity, free]
+        balance:
+          type: number
+        currency:
+          type: string
+      required:
+        - name
+        - type
+        - tag
+        - balance
+        - currency
+
+    UpdateAccountBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        tag:
+          type: string
+        balance:
+          type: number
+        isActive:
+          type: boolean
+
+    AccountsSummary:
+      type: object
+      properties:
+        totalBalance:
+          type: number
+        emergencyFund:
+          type: number
+        opportunityFund:
+          type: number
+        freeCash:
+          type: number
+        monthlyInflow:
+          type: number
+        monthlyOutflow:
+          type: number
+      required:
+        - totalBalance
+        - emergencyFund
+        - opportunityFund
+        - freeCash
+        - monthlyInflow
+        - monthlyOutflow
+
+    # SIP
+    SipConfig:
+      type: object
+      properties:
+        id:
+          type: integer
+        monthlyAmount:
+          type: number
+        equityPercent:
+          type: number
+        debtPercent:
+          type: number
+        metalsPercent:
+          type: number
+        opportunityPercent:
+          type: number
+        assetAllocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SipAssetAllocation"
+        updatedAt:
+          type: string
+      required:
+        - id
+        - monthlyAmount
+        - equityPercent
+        - debtPercent
+        - metalsPercent
+        - opportunityPercent
+        - assetAllocations
+        - updatedAt
+
+    SipAssetAllocation:
+      type: object
+      properties:
+        assetId:
+          type: integer
+        assetName:
+          type: string
+        category:
+          type: string
+        percent:
+          type: number
+      required:
+        - assetId
+        - assetName
+        - category
+        - percent
+
+    UpdateSipConfigBody:
+      type: object
+      properties:
+        monthlyAmount:
+          type: number
+        equityPercent:
+          type: number
+        debtPercent:
+          type: number
+        metalsPercent:
+          type: number
+        opportunityPercent:
+          type: number
+        assetAllocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SipAssetAllocation"
+      required:
+        - monthlyAmount
+        - equityPercent
+        - debtPercent
+        - metalsPercent
+        - opportunityPercent
+        - assetAllocations
+
+    SipHistoryEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        month:
+          type: string
+        totalAmount:
+          type: number
+        breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SipBreakdownItem"
+        executedAt:
+          type: string
+      required:
+        - id
+        - month
+        - totalAmount
+        - breakdown
+        - executedAt
+
+    SipBreakdownItem:
+      type: object
+      properties:
+        assetId:
+          type: integer
+        assetName:
+          type: string
+        amount:
+          type: number
+      required:
+        - assetId
+        - assetName
+        - amount
+
+    RecordSipBody:
+      type: object
+      properties:
+        month:
+          type: string
+        totalAmount:
+          type: number
+        breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SipBreakdownItem"
+      required:
+        - month
+        - totalAmount
+        - breakdown
+
+    # Settings
+    Settings:
+      type: object
+      properties:
+        id:
+          type: integer
+        emergencyFundRequired:
+          type: number
+        emergencyFundLowThreshold:
+          type: number
+        emergencyFundCriticalThreshold:
+          type: number
+        rebalancingDriftTolerance:
+          type: number
+        crashDropLevels:
+          type: array
+          items:
+            type: number
+        crashDeploymentStrategy:
+          type: object
+          additionalProperties:
+            type: number
+        currency:
+          type: string
+        updatedAt:
+          type: string
+      required:
+        - id
+        - emergencyFundRequired
+        - emergencyFundLowThreshold
+        - emergencyFundCriticalThreshold
+        - rebalancingDriftTolerance
+        - crashDropLevels
+        - crashDeploymentStrategy
+        - currency
+        - updatedAt
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        emergencyFundRequired:
+          type: number
+        emergencyFundLowThreshold:
+          type: number
+        emergencyFundCriticalThreshold:
+          type: number
+        rebalancingDriftTolerance:
+          type: number
+        crashDropLevels:
+          type: array
+          items:
+            type: number
+        crashDeploymentStrategy:
+          type: object
+          additionalProperties:
+            type: number
+        currency:
+          type: string
+
+    # Analytics
+    PerformanceAnalytics:
+      type: object
+      properties:
+        totalReturn:
+          type: number
+        totalReturnPercent:
+          type: number
+        cagr:
+          type: ["number", "null"]
+        categoryPerformance:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryPerformance"
+        drawdown:
+          type: number
+        sipTotalInvested:
+          type: number
+        sipCurrentValue:
+          type: number
+        sipReturn:
+          type: number
+      required:
+        - totalReturn
+        - totalReturnPercent
+        - categoryPerformance
+        - drawdown
+        - sipTotalInvested
+        - sipCurrentValue
+        - sipReturn
+
+    CategoryPerformance:
+      type: object
+      properties:
+        category:
+          type: string
+        invested:
+          type: number
+        currentValue:
+          type: number
+        returnAmount:
+          type: number
+        returnPercent:
+          type: number
+      required:
+        - category
+        - invested
+        - currentValue
+        - returnAmount
+        - returnPercent
+
+    GrowthDataPoint:
+      type: object
+      properties:
+        date:
+          type: string
+        totalValue:
+          type: number
+        invested:
+          type: number
+      required:
+        - date
+        - totalValue
+        - invested
+
+    # Rebalancing
+    RebalancingStatus:
+      type: object
+      properties:
+        overallDrift:
+          type: number
+        needsRebalancing:
+          type: boolean
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/RebalancingCategory"
+        suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RebalancingSuggestion"
+      required:
+        - overallDrift
+        - needsRebalancing
+        - categories
+        - suggestions
+
+    RebalancingCategory:
+      type: object
+      properties:
+        category:
+          type: string
+        targetPercent:
+          type: number
+        actualPercent:
+          type: number
+        drift:
+          type: number
+        status:
+          type: string
+          enum: [overweight, underweight, balanced]
+        assets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RebalancingAsset"
+      required:
+        - category
+        - targetPercent
+        - actualPercent
+        - drift
+        - status
+        - assets
+
+    RebalancingAsset:
+      type: object
+      properties:
+        assetId:
+          type: integer
+        assetName:
+          type: string
+        targetPercent:
+          type: number
+        actualPercent:
+          type: number
+        drift:
+          type: number
+      required:
+        - assetId
+        - assetName
+        - targetPercent
+        - actualPercent
+        - drift
+
+    RebalancingSuggestion:
+      type: object
+      properties:
+        type:
+          type: string
+        message:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high]
+      required:
+        - type
+        - message
+        - priority
+
+    UpdateTargetsBody:
+      type: object
+      properties:
+        equityPercent:
+          type: number
+        debtPercent:
+          type: number
+        metalsPercent:
+          type: number
+        cashPercent:
+          type: number
+        assetTargets:
+          type: array
+          items:
+            type: object
+            properties:
+              assetId:
+                type: integer
+              targetPercent:
+                type: number
+            required:
+              - assetId
+              - targetPercent
+      required:
+        - equityPercent
+        - debtPercent
+        - metalsPercent
+        - cashPercent
+        - assetTargets
+
+    # Opportunity
+    OpportunityStatus:
+      type: object
+      properties:
+        availableAmount:
+          type: number
+        totalDeployed:
+          type: number
+        stages:
+          type: array
+          items:
+            $ref: "#/components/schemas/OpportunityStage"
+      required:
+        - availableAmount
+        - totalDeployed
+        - stages
+
+    OpportunityStage:
+      type: object
+      properties:
+        dropPercent:
+          type: number
+        deployPercent:
+          type: number
+        deployAmount:
+          type: number
+        triggered:
+          type: boolean
+        triggeredAt:
+          type: ["string", "null"]
+      required:
+        - dropPercent
+        - deployPercent
+        - deployAmount
+        - triggered
+
+    Deployment:
+      type: object
+      properties:
+        id:
+          type: integer
+        dropPercent:
+          type: number
+        deployedAmount:
+          type: number
+        assetId:
+          type: ["integer", "null"]
+        assetName:
+          type: ["string", "null"]
+        note:
+          type: ["string", "null"]
+        deployedAt:
+          type: string
+      required:
+        - id
+        - dropPercent
+        - deployedAmount
+        - deployedAt
+
+    RecordDeploymentBody:
+      type: object
+      properties:
+        dropPercent:
+          type: number
+        deployedAmount:
+          type: number
+        assetId:
+          type: ["integer", "null"]
+        note:
+          type: ["string", "null"]
+        deployedAt:
+          type: string
+      required:
+        - dropPercent
+        - deployedAmount
+        - deployedAt
