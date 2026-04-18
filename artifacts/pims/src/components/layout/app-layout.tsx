@@ -1,9 +1,35 @@
 import React, { ReactNode } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Briefcase, Building2, ReceiptText, LineChart, SlidersHorizontal, Calculator, CandlestickChart, Settings, LogOut, User as UserIcon, BarChart3 } from "lucide-react";
+import {
+  LayoutDashboard,
+  Briefcase,
+  Building2,
+  ReceiptText,
+  LineChart,
+  SlidersHorizontal,
+  Calculator,
+  CandlestickChart,
+  Settings,
+  LogOut,
+  User as UserIcon,
+  BarChart3,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AppLayoutProps {
@@ -32,6 +58,34 @@ export function AppLayout({ children }: AppLayoutProps) {
     return false;
   };
 
+  const navGroups = [
+    {
+      label: "Overview",
+      items: [
+        { href: "/", label: "Dashboard", icon: LayoutDashboard, testId: "link-dashboard" },
+        { href: "/portfolio", label: "Portfolio", icon: Briefcase, testId: "link-portfolio" },
+        { href: "/accounts", label: "Accounts", icon: Building2, testId: "link-accounts" },
+        { href: "/transactions", label: "Transactions", icon: ReceiptText, testId: "link-transactions" },
+      ],
+    },
+    {
+      label: "Analytics",
+      items: [
+        { href: "/assets", label: "Assets", icon: BarChart3, testId: "link-assets" },
+        { href: "/performance", label: "Performance", icon: CandlestickChart, testId: "link-performance" },
+        { href: "/rebalancing", label: "Rebalancing", icon: SlidersHorizontal, testId: "link-rebalancing" },
+        { href: "/sip", label: "SIP Planner", icon: Calculator, testId: "link-sip" },
+        { href: "/opportunity", label: "Opportunity Fund", icon: LineChart, testId: "link-opportunity" },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { href: "/settings", label: "Settings", icon: Settings, testId: "link-settings" },
+      ],
+    },
+  ];
+
   return (
     <SidebarProvider>
       <div className="flex h-screen bg-background text-foreground overflow-hidden w-full">
@@ -42,111 +96,43 @@ export function AppLayout({ children }: AppLayoutProps) {
               <span>PIMS Terminal</span>
             </div>
           </SidebarHeader>
+
           <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 mt-4 mb-2">Overview</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/")} className={isPathActive("/") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/" data-testid="link-dashboard">
-                        <LayoutDashboard className="w-4 h-4 mr-2" />
-                        <span>Dashboard</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/portfolio")} className={isPathActive("/portfolio") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/portfolio" data-testid="link-portfolio">
-                        <Briefcase className="w-4 h-4 mr-2" />
-                        <span>Portfolio</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/accounts")} className={isPathActive("/accounts") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/accounts" data-testid="link-accounts">
-                        <Building2 className="w-4 h-4 mr-2" />
-                        <span>Accounts</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/transactions")} className={isPathActive("/transactions") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/transactions" data-testid="link-transactions">
-                        <ReceiptText className="w-4 h-4 mr-2" />
-                        <span>Transactions</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 mt-6 mb-2">Analytics</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/assets") && !location.startsWith("/assets/")} className={isPathActive("/assets") && !location.startsWith("/assets/") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/assets" data-testid="link-assets">
-                        <BarChart3 className="w-4 h-4 mr-2" />
-                        <span>Assets</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/performance")} className={isPathActive("/performance") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/performance" data-testid="link-performance">
-                        <CandlestickChart className="w-4 h-4 mr-2" />
-                        <span>Performance</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/rebalancing")} className={isPathActive("/rebalancing") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/rebalancing" data-testid="link-rebalancing">
-                        <SlidersHorizontal className="w-4 h-4 mr-2" />
-                        <span>Rebalancing</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/sip")} className={isPathActive("/sip") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/sip" data-testid="link-sip">
-                        <Calculator className="w-4 h-4 mr-2" />
-                        <span>SIP Planner</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/opportunity")} className={isPathActive("/opportunity") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/opportunity" data-testid="link-opportunity">
-                        <LineChart className="w-4 h-4 mr-2" />
-                        <span>Opportunity Fund</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 mt-6 mb-2">System</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isPathActive("/settings")} className={isPathActive("/settings") ? "bg-accent text-accent-foreground" : ""}>
-                      <Link href="/settings" data-testid="link-settings">
-                        <Settings className="w-4 h-4 mr-2" />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+            {navGroups.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 mt-4 mb-2">
+                  {group.label}
+                </SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map(({ href, label, icon: Icon, testId }) => {
+                      const active =
+                        href === "/"
+                          ? isPathActive("/") && !location.startsWith("/assets/")
+                          : href === "/assets"
+                          ? isPathActive("/assets") && !location.startsWith("/assets/")
+                          : isPathActive(href);
+                      return (
+                        <SidebarMenuItem key={href}>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={active}
+                            className={active ? "bg-accent text-accent-foreground" : ""}
+                          >
+                            <Link href={href} data-testid={testId}>
+                              <Icon className="w-4 h-4 mr-2" />
+                              <span>{label}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            ))}
           </SidebarContent>
+
           <SidebarFooter className="border-t border-border p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 overflow-hidden">
@@ -158,17 +144,54 @@ export function AppLayout({ children }: AppLayoutProps) {
                   <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => logout()} data-testid="button-logout" title="Logout">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => logout()}
+                data-testid="button-logout"
+                title="Logout"
+              >
                 <LogOut className="w-4 h-4 text-muted-foreground hover:text-foreground" />
               </Button>
             </div>
           </SidebarFooter>
         </Sidebar>
-        <main className="flex-1 overflow-auto bg-background flex flex-col h-full">
-          <div className="flex-1 w-full max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
-            {children}
-          </div>
-        </main>
+
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {/* Mobile top bar — only visible on small screens */}
+          <header className="flex md:hidden items-center justify-between px-4 h-14 border-b border-border bg-background shrink-0">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger />
+              <div className="flex items-center gap-2 font-bold text-base text-primary">
+                <LineChart className="w-5 h-5" />
+                <span>PIMS Terminal</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <div
+                className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-accent-foreground"
+                title={user?.name || "User"}
+              >
+                <UserIcon className="w-4 h-4" />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => logout()}
+                data-testid="button-logout-mobile"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4 text-muted-foreground" />
+              </Button>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-auto bg-background">
+            <div className="w-full max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
