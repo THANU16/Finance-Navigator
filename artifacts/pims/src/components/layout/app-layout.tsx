@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Redirect } from "wouter";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarFooter, SidebarGroup, SidebarGroupLabel, SidebarGroupContent } from "@/components/ui/sidebar";
 import { Link, useLocation } from "wouter";
-import { LayoutDashboard, Briefcase, Building2, ReceiptText, LineChart, SlidersHorizontal, Calculator, CandlestickChart, Settings, LogOut, User as UserIcon } from "lucide-react";
+import { LayoutDashboard, Briefcase, Building2, ReceiptText, LineChart, SlidersHorizontal, Calculator, CandlestickChart, Settings, LogOut, User as UserIcon, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface AppLayoutProps {
@@ -87,6 +87,14 @@ export function AppLayout({ children }: AppLayoutProps) {
               <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 mt-6 mb-2">Analytics</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isPathActive("/assets") && !location.startsWith("/assets/")} className={isPathActive("/assets") && !location.startsWith("/assets/") ? "bg-accent text-accent-foreground" : ""}>
+                      <Link href="/assets" data-testid="link-assets">
+                        <BarChart3 className="w-4 h-4 mr-2" />
+                        <span>Assets</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isPathActive("/performance")} className={isPathActive("/performance") ? "bg-accent text-accent-foreground" : ""}>
                       <Link href="/performance" data-testid="link-performance">

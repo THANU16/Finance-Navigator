@@ -21,6 +21,7 @@ import Rebalancing from "@/pages/rebalancing";
 import SipPlanner from "@/pages/sip";
 import OpportunityFund from "@/pages/opportunity";
 import Settings from "@/pages/settings";
+import AssetAnalysisList from "@/pages/assets";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +57,9 @@ function Router() {
       </Route>
       <Route path="/transactions">
         <AppLayout><Transactions /></AppLayout>
+      </Route>
+      <Route path="/assets">
+        <AppLayout><AssetAnalysisList /></AppLayout>
       </Route>
       <Route path="/performance">
         <AppLayout><Performance /></AppLayout>
