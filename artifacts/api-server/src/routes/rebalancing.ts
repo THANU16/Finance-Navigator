@@ -94,7 +94,7 @@ router.get("/status", async (req, res): Promise<void> => {
     });
   }
 
-  res.json({ overallDrift, needsRebalancing, categories, suggestions });
+  res.json({ totalPortfolioValue: totalValue, overallDrift, needsRebalancing, categories, suggestions });
 });
 
 router.put("/targets", async (req, res): Promise<void> => {
