@@ -138,6 +138,18 @@ export default function SipPlanner() {
 
   const handleExecuteSip = async () => {
     if (!categoryValid) { toast({ title: "Fix category percentages first", variant: "destructive" }); return; }
+
+    // Prevent duplicate SIP for the same month
+    const alreadyExecuted = (history || []).some((h) => h.month === execMonth);
+    if (alreadyExecuted) {
+      toast({
+        title: "SIP Already Executed",
+        description: `SIP for ${execMonth} was already executed. Select a different month to continue.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setExecuting(true);
     const today = new Date().toISOString().slice(0, 10);
     const breakdown: { assetId: number; assetName: string; amount: number }[] = [];

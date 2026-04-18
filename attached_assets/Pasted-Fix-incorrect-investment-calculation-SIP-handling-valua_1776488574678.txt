@@ -1,0 +1,158 @@
+Fix incorrect investment calculation, SIP handling, valuation usage, and allocation logic.
+
+---------------------------------------
+1. INVESTED AMOUNT FIX (CRITICAL)
+---------------------------------------
+
+Current issue:
+- SIP transactions are NOT included in invested amount
+
+---------------------------------------
+FIX:
+---------------------------------------
+
+Invested must be calculated as:
+
+Invested =
+    SUM(all "invest" transactions)
+  + SUM(all "sip" transactions)
+  - SUM(all "redeem/sell" transactions)
+
+SIP must be treated exactly like investment.
+
+---
+
+---------------------------------------
+2. DUPLICATE SIP PREVENTION
+---------------------------------------
+
+Current issue:
+- same SIP created twice
+
+---------------------------------------
+FIX:
+---------------------------------------
+
+Each SIP execution must:
+- have unique ID (e.g. SIP-YYYY-MM)
+- prevent duplicate execution for same period
+
+If duplicate exists:
+- ignore or merge duplicates
+
+---
+
+---------------------------------------
+3. VALUATION FIX (CRITICAL)
+---------------------------------------
+
+Current issue:
+- system not using latest valuation
+
+---------------------------------------
+FIX:
+---------------------------------------
+
+Current Value =
+    latest valuation snapshot by date
+
+NOT:
+- average
+- random
+- previous value
+
+ALWAYS pick:
+👉 most recent valuation entry
+
+---
+
+---------------------------------------
+4. RETURN CALCULATION FIX
+---------------------------------------
+
+Return =
+    Current Value - Invested
+
+Return % =
+    (Return / Invested) * 100
+
+---
+
+---------------------------------------
+5. ALLOCATION FIX (CRITICAL)
+---------------------------------------
+
+Current issue:
+- allocation showing 0%
+
+---------------------------------------
+FIX:
+---------------------------------------
+
+Allocation % =
+    Asset Current Value / Total Portfolio Value
+
+Total Portfolio Value =
+    sum of ALL asset current values
+
+---
+
+---------------------------------------
+6. GLOBAL RECALCULATION
+---------------------------------------
+
+Add function:
+
+👉 "Recalculate Portfolio"
+
+This must:
+- recompute all assets
+- recompute totals
+- recompute allocation
+
+---
+
+---------------------------------------
+7. SINGLE SOURCE OF TRUTH
+---------------------------------------
+
+Create:
+
+PortfolioCalculationService
+
+This service must calculate:
+- invested
+- current value
+- return
+- allocation
+
+ALL pages must use this:
+- portfolio
+- asset detail
+- dashboard
+
+---
+
+---------------------------------------
+8. VALIDATION RULES
+---------------------------------------
+
+- no duplicate SIP for same month
+- valuation must always override old values
+- SIP must NOT affect valuation directly
+- transactions only affect invested amount
+
+---
+
+---------------------------------------
+EXPECTED RESULT
+---------------------------------------
+
+For the sample case:
+
+Invested = 310,200  
+Current Value = 320,000  
+Return = 9,800  
+Return % ≈ 3.16%  
+
+System must show this correctly across ALL pages.

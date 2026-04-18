@@ -2,13 +2,20 @@ import { useState } from "react";
 import { useGetDashboardSummary, getGetDashboardSummaryQueryKey, useGetDashboardAlerts, getGetDashboardAlertsQueryKey, useGetGrowthChart, getGetGrowthChartQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent } from "@/lib/utils";
-import { AlertCircle, ArrowDownRight, ArrowUpRight, TrendingUp, Wallet, ShieldAlert, BadgeInfo } from "lucide-react";
+import { AlertCircle, ArrowDownRight, ArrowUpRight, TrendingUp, Wallet, ShieldAlert, BadgeInfo, RefreshCw } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip as RechartsTooltip, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [recalculating, setRecalculating] = useState(false);
+
   const { data: summary, isLoading: isSummaryLoading } = useGetDashboardSummary({
     query: { queryKey: getGetDashboardSummaryQueryKey() }
   });
@@ -22,6 +29,16 @@ export default function Dashboard() {
     { query: { queryKey: getGetGrowthChartQueryKey({ period: "1y" }) } }
   );
 
+  const handleRecalculate = async () => {
+    setRecalculating(true);
+    try {
+      await queryClient.invalidateQueries();
+      toast({ title: "Portfolio Recalculated", description: "All values have been recomputed from your transactions and valuations." });
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   if (isSummaryLoading || isAlertsLoading || isGrowthLoading) {
     return <DashboardSkeleton />;
   }
@@ -30,9 +47,15 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
-        <p className="text-muted-foreground">Your complete financial picture.</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
+          <p className="text-muted-foreground">Your complete financial picture.</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleRecalculate} disabled={recalculating} className="shrink-0 mt-1">
+          <RefreshCw className={`h-4 w-4 mr-2 ${recalculating ? "animate-spin" : ""}`} />
+          Recalculate Portfolio
+        </Button>
       </div>
 
       {alerts && alerts.length > 0 && (

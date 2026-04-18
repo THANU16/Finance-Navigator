@@ -24,6 +24,8 @@ export interface AssetMetrics {
   currentValue: number;
   returnAmount: number;
   returnPercent: number;
+  /** Allocation % = asset currentValue / total portfolio investment currentValue */
+  actualPercent: number;
   targetPercent: number;
   currency: string;
   isActive: boolean;
@@ -121,8 +123,8 @@ export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetr
     }
   }
 
-  // Compute per-asset metrics
-  const assetMetrics: AssetMetrics[] = investmentAssets.map((asset) => {
+  // Compute per-asset metrics (actualPercent filled in after totalCurrentValue is known)
+  const rawMetrics = investmentAssets.map((asset) => {
     const investedAmount = investedMap.get(asset.id) ?? 0;
     const currentValue = latestValMap.get(asset.id) ?? 0;
     const returnAmount = currentValue - investedAmount;
@@ -142,8 +144,14 @@ export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetr
     };
   });
 
-  const totalInvested = assetMetrics.reduce((s, a) => s + a.investedAmount, 0);
-  const totalCurrentValue = assetMetrics.reduce((s, a) => s + a.currentValue, 0);
+  const totalInvested = rawMetrics.reduce((s, a) => s + a.investedAmount, 0);
+  const totalCurrentValue = rawMetrics.reduce((s, a) => s + a.currentValue, 0);
+
+  // Compute actualPercent now that totalCurrentValue is known
+  const assetMetrics: AssetMetrics[] = rawMetrics.map((a) => ({
+    ...a,
+    actualPercent: totalCurrentValue > 0 ? (a.currentValue / totalCurrentValue) * 100 : 0,
+  }));
   const totalReturn = totalCurrentValue - totalInvested;
   const totalReturnPercent = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
 
@@ -238,6 +246,8 @@ export async function getSingleAssetMetrics(
     currentValue,
     returnAmount,
     returnPercent,
+    // Single-asset view: actualPercent not meaningful without portfolio context
+    actualPercent: 0,
     targetPercent: Number(asset.targetPercent),
     currency: asset.currency ?? "LKR",
     isActive: asset.isActive ?? true,

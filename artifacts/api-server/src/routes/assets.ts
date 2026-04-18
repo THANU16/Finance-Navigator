@@ -12,17 +12,14 @@ router.get("/", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
   const categoryFilter = req.query.category as string | undefined;
 
-  // Use portfolio service for accurate invested + current values
+  // Use portfolio service for accurate invested + current values + actualPercent
   const portfolio = await getPortfolioMetrics(userId);
   let assets = portfolio.assets;
   if (categoryFilter) {
     assets = assets.filter((a) => a.category === categoryFilter);
   }
 
-  const totalCurrentValue = assets.reduce((s, a) => s + a.currentValue, 0);
-
-  // Also fetch raw asset rows for metadata (targetPercent, currency etc already in AssetMetrics)
-  // Fetch isActive status and extra fields not in portfolio metrics
+  // Fetch raw asset rows for metadata not carried in AssetMetrics (units, nav, pricePerUnit, timestamps)
   const rawAssets = await db.select().from(assetsTable).where(eq(assetsTable.userId, userId));
   const rawMap = new Map(rawAssets.map((a) => [a.id, a]));
 
@@ -42,7 +39,8 @@ router.get("/", async (req, res): Promise<void> => {
         profitLoss: a.returnAmount,
         profitLossPercent: a.returnPercent,
         targetPercent: a.targetPercent,
-        actualPercent: totalCurrentValue > 0 ? (a.currentValue / totalCurrentValue) * 100 : 0,
+        // actualPercent from service: currentValue / total portfolio investment currentValue
+        actualPercent: a.actualPercent,
         currency: a.currency,
         isActive: a.isActive,
         createdAt: raw?.createdAt.toISOString() ?? "",

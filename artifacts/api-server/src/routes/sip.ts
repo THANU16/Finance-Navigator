@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, sipConfigsTable, sipHistoryTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { UpdateSipConfigBody, RecordSipExecutionBody } from "@workspace/api-zod";
 
@@ -33,7 +33,10 @@ router.get("/", async (req, res): Promise<void> => {
 router.put("/", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
   const parsed = UpdateSipConfigBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
 
   const { monthlyAmount, equityPercent, debtPercent, metalsPercent, opportunityPercent, assetAllocations } = parsed.data;
   const total = equityPercent + debtPercent + metalsPercent + opportunityPercent;
@@ -82,17 +85,39 @@ router.get("/history", async (req, res): Promise<void> => {
 router.post("/history", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
   const parsed = RecordSipExecutionBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: "Invalid input" }); return; }
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid input" });
+    return;
+  }
 
   const { month, totalAmount, breakdown } = parsed.data;
+
+  // Prevent duplicate SIP execution for the same month
+  const [existing] = await db
+    .select()
+    .from(sipHistoryTable)
+    .where(and(eq(sipHistoryTable.userId, userId), eq(sipHistoryTable.month, month)))
+    .limit(1);
+
+  if (existing) {
+    res.status(409).json({
+      error: `SIP for ${month} has already been executed.`,
+      existingId: existing.id,
+    });
+    return;
+  }
+
   const [entry] = await db.insert(sipHistoryTable).values({
-    userId, month,
+    userId,
+    month,
     totalAmount: totalAmount.toString(),
     breakdown: breakdown as unknown as string,
   }).returning();
 
   res.status(201).json({
-    id: entry.id, month: entry.month, totalAmount: Number(entry.totalAmount),
+    id: entry.id,
+    month: entry.month,
+    totalAmount: Number(entry.totalAmount),
     breakdown: (entry.breakdown as unknown[]) || [],
     executedAt: entry.executedAt.toISOString(),
   });

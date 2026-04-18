@@ -10,6 +10,7 @@ import dashboardRouter from "./dashboard";
 import analyticsRouter from "./analytics";
 import rebalancingRouter from "./rebalancing";
 import opportunityRouter from "./opportunity";
+import portfolioRouter from "./portfolio";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/dashboard", dashboardRouter);
 router.use("/analytics", analyticsRouter);
 router.use("/rebalancing", rebalancingRouter);
 router.use("/opportunity", opportunityRouter);
+router.use("/portfolio", portfolioRouter);
 
 export default router;
