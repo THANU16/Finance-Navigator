@@ -79,8 +79,8 @@ export default function AssetDetail() {
   });
 
   const handleAddValuation = () => {
-    if (!newValue || !newDate) return;
-    addValuation.mutate({ assetId: id, data: { value: Number(newValue), date: newDate, note: newNote || undefined } });
+    if (!newValue || !newDate || !id) return;
+    addValuation.mutate({ id, data: { value: Number(newValue), date: newDate, note: newNote || undefined } });
   };
 
   if (isAssetLoading || isValuationsLoading) return <AssetDetailSkeleton />;
@@ -255,7 +255,7 @@ export default function AssetDetail() {
                     <Button
                       variant="ghost" size="icon"
                       className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => deleteValuation.mutate({ assetId: id, valuationId: val.id })}
+                      onClick={() => deleteValuation.mutate({ id, valuationId: val.id })}
                     >
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>

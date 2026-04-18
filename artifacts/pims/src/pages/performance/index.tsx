@@ -4,7 +4,7 @@ import { formatCurrency, formatPercent } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend } from "recharts";
 import { TrendingUp, TrendingDown, Info } from "lucide-react";
 
 export default function Performance() {
@@ -109,45 +109,47 @@ export default function Performance() {
             <CardTitle>Portfolio Growth</CardTitle>
             <CardDescription>Value over time</CardDescription>
           </CardHeader>
-          <CardContent className="h-[400px]">
+          <CardContent className="h-[420px]">
             {growth && growth.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={growth} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={growth} margin={{ top: 10, right: 20, left: 10, bottom: 40 }}>
                   <defs>
                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35}/>
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorInvested" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15}/>
                       <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="date" 
-                    tickFormatter={(val) => {
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={val => {
                       const d = new Date(val);
-                      return `${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
+                      return `${d.toLocaleString("default", { month: "short" })} ${d.getFullYear()}`;
                     }}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    tickLine={false}
-                    axisLine={false}
-                    minTickGap={30}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false} axisLine={false} minTickGap={40}
+                    angle={-30} textAnchor="end" height={50}
                   />
-                  <YAxis 
-                    tickFormatter={(val) => `Rs ${val / 1000000}M`}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                    tickLine={false}
-                    axisLine={false}
+                  <YAxis
+                    tickFormatter={val => val >= 1000000 ? `Rs ${(val/1000000).toFixed(1)}M` : `Rs ${(val/1000).toFixed(0)}k`}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false} axisLine={false} width={70}
                   />
-                  <Tooltip 
-                    formatter={(value: number) => formatCurrency(value)}
-                    labelFormatter={(label) => new Date(label).toLocaleDateString()}
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                  <Tooltip
+                    formatter={(value: number, name: string) => [formatCurrency(value), name === "totalValue" ? "Portfolio Value" : "Amount Invested"]}
+                    labelFormatter={label => new Date(label).toLocaleDateString()}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", fontSize: 13 }}
                   />
-                  <Area type="monotone" dataKey="totalValue" name="Current Value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorValue)" strokeWidth={2} />
-                  <Area type="monotone" dataKey="invested" name="Invested" stroke="hsl(var(--muted-foreground))" fillOpacity={1} fill="url(#colorInvested)" strokeWidth={2} strokeDasharray="5 5" />
+                  <Legend
+                    formatter={v => v === "totalValue" ? "Portfolio Value" : "Amount Invested"}
+                    wrapperStyle={{ fontSize: 13, paddingTop: 8 }}
+                  />
+                  <Area type="monotone" dataKey="totalValue" name="Portfolio Value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorValue)" strokeWidth={2.5} dot={false} />
+                  <Area type="monotone" dataKey="invested" name="Amount Invested" stroke="hsl(var(--muted-foreground))" fillOpacity={1} fill="url(#colorInvested)" strokeWidth={2} strokeDasharray="5 5" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
@@ -164,24 +166,29 @@ export default function Performance() {
           <CardContent className="h-[400px]">
             {analytics.categoryPerformance.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={analytics.categoryPerformance} layout="vertical" margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" />
-                  <XAxis type="number" hide />
-                  <YAxis 
-                    dataKey="category" 
-                    type="category" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tickFormatter={(val) => val.replace('_', ' ').substring(0, 10) + '...'}
-                    width={80}
-                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))', textTransform: 'capitalize' }}
+                <BarChart data={analytics.categoryPerformance} layout="vertical" margin={{ top: 10, right: 30, bottom: 10, left: 10 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="hsl(var(--border))" />
+                  <XAxis
+                    type="number"
+                    tickFormatter={v => `${v.toFixed(1)}%`}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
+                    tickLine={false} axisLine={false}
                   />
-                  <Tooltip 
-                    formatter={(value: number) => formatPercent(value)}
-                    labelFormatter={(label) => String(label).replace('_', ' ')}
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
+                  <YAxis
+                    dataKey="category"
+                    type="category"
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={val => val.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                    width={90}
+                    tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }}
                   />
-                  <Bar dataKey="returnPercent" radius={[0, 4, 4, 0]}>
+                  <Tooltip
+                    formatter={(value: number) => [`${Number(value).toFixed(2)}%`, "Return"]}
+                    labelFormatter={label => String(label).replace(/_/g, " ")}
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", fontSize: 13 }}
+                  />
+                  <Bar dataKey="returnPercent" radius={[0, 4, 4, 0]} label={{ position: "right", formatter: (v: number) => `${v.toFixed(1)}%`, fontSize: 12, fill: "hsl(var(--foreground))" }}>
                     {analytics.categoryPerformance.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.returnPercent >= 0 ? "hsl(142 71% 45%)" : "hsl(348 83% 47%)"} />
                     ))}

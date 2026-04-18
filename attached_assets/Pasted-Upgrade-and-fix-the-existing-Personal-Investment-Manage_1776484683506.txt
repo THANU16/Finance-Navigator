@@ -1,0 +1,235 @@
+Upgrade and fix the existing Personal Investment Management System.
+
+This is NOT a new system. This is a refinement of the current system.
+
+Focus on:
+- fixing incorrect logic
+- improving configurability
+- improving UI clarity
+- adding missing features
+
+---------------------------------------
+1. SIP PLANNER — MAJOR UPGRADE
+---------------------------------------
+
+Current issue:
+- Only equity sub-allocation exists
+- SIP history is empty
+- No easy SIP transaction creation
+
+---------------------------------------
+REQUIRED FIXES
+---------------------------------------
+
+1. FULL CATEGORY SUB-ALLOCATION
+
+All categories must support sub-allocation (NOT ONLY EQUITY):
+
+- Equity Funds → multiple funds (CAL, NDB, etc.)
+- Debt Funds → multiple funds
+- Metals → Gold, Silver (dynamic)
+- Opportunity Fund → configurable allocation
+
+Each category:
+- must allow adding/removing items
+- must allow setting percentage per item
+- total per category must = 100%
+
+---
+
+2. SIP HISTORY FIX
+
+- Track all SIP executions
+- Show:
+  - date
+  - total SIP amount
+  - category allocation
+  - sub-allocation distribution
+
+If no SIP executed:
+→ show "No SIP history yet"
+
+---
+
+3. ADD "EXECUTE SIP" BUTTON (IMPORTANT)
+
+Add button:
+👉 "Execute SIP"
+
+When clicked:
+- system automatically creates transactions:
+  - fund investments
+  - debt allocation
+  - metal allocation
+  - opportunity fund allocation
+
+IMPORTANT RULE:
+- SIP transactions should NOT increase asset twice
+- must only create transactions (not duplicate valuation impact)
+
+---
+
+4. SIP TRANSACTION TYPE
+
+Add new transaction type:
+👉 "SIP"
+
+Rules:
+- grouped transaction (one SIP → multiple asset allocations)
+- must not double-count in valuation
+
+---
+
+---------------------------------------
+2. OPPORTUNITY FUND — MAKE FULLY CONFIGURABLE
+---------------------------------------
+
+Current issue:
+- hardcoded drop % and deployment %
+
+---------------------------------------
+REQUIRED FIXES
+---------------------------------------
+
+User must be able to configure:
+
+- Market Drop %
+- Deployment %
+
+Example:
+
+| Drop % | Deploy % |
+|--------|---------|
+| 10%    | 25%     |
+| 15%    | 50%     |
+| 20%    | 75%     |
+| 25%    | 100%    |
+
+---
+
+Features:
+
+- Add new rule
+- Edit rule
+- Delete rule
+
+---
+
+System must calculate:
+- actual LKR deployment amount
+- based on current opportunity fund
+
+---
+
+UI:
+- table format
+- editable rows
+- dynamic updates
+
+---
+
+---------------------------------------
+3. VALUATION ENGINE FIX (CRITICAL)
+---------------------------------------
+
+Current issue:
+- valuation not accurate
+
+---------------------------------------
+REQUIRED LOGIC
+---------------------------------------
+
+System must calculate value ONLY from:
+
+1. Transactions
+2. Manual valuation updates
+
+---
+
+RULES:
+
+- Fund value = sum of investments (or latest updated value)
+- Bank value = balance from transactions
+- Opportunity fund = tagged cash only
+- Emergency fund = tagged cash only
+- Metals = latest entered value
+
+---
+
+IMPORTANT:
+
+❌ NO duplicate counting  
+❌ NO mixing SIP + manual updates  
+✔ Always recalculate from source data  
+
+---
+
+Add:
+👉 "Recalculate Portfolio" function
+
+---
+
+---------------------------------------
+4. CHART & VISUALIZATION FIX
+---------------------------------------
+
+Current issue:
+- chart text not readable
+
+---------------------------------------
+REQUIRED FIXES
+---------------------------------------
+
+- increase font size
+- proper label spacing
+- readable legends
+- tooltip on hover
+- percentage + value display
+
+Charts must include:
+- Pie chart (allocation)
+- Bar chart (comparison)
+- Line chart (growth)
+
+---
+
+---------------------------------------
+5. TRANSACTION SYSTEM FIX
+---------------------------------------
+
+Add:
+
+👉 SIP transaction type
+
+Rules:
+- one SIP = multiple sub transactions
+- must not double count
+- must update balances correctly
+
+---
+
+---------------------------------------
+6. GENERAL UI IMPROVEMENTS
+---------------------------------------
+
+- clean spacing
+- readable typography
+- consistent color usage
+- mobile responsive
+- highlight important metrics
+
+---
+
+---------------------------------------
+FINAL EXPECTATION
+---------------------------------------
+
+After this update:
+
+✔ SIP system becomes fully dynamic  
+✔ Opportunity deployment becomes configurable  
+✔ Valuation becomes accurate  
+✔ Transactions become clean and reliable  
+✔ UI becomes readable and professional  
+
+This system must behave like a financial control system, not a basic tracker.
