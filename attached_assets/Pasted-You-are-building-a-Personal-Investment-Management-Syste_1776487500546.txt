@@ -1,0 +1,262 @@
+You are building a Personal Investment Management System (PIMS).
+
+Before implementing anything, you MUST clearly understand and enforce the following financial model, calculation rules, and data flow.
+
+This system is NOT a simple UI tracker.
+It is a financial calculation engine + visualization system.
+
+---------------------------------------
+1. CORE SYSTEM PURPOSE
+---------------------------------------
+
+The system helps a user:
+
+- Track investments across multiple asset categories
+- Manage monthly SIP (Systematic Investment Plan)
+- Track cash (Emergency + Opportunity)
+- Track fund performance
+- Update valuations manually
+- Make rebalancing decisions
+- Deploy opportunity cash during market drops
+
+---------------------------------------
+2. ASSET STRUCTURE (DYNAMIC & CONFIGURABLE)
+---------------------------------------
+
+There are 4 main categories:
+
+1. Equity Funds
+   - user can create multiple funds (e.g. CAL, NDB, First Capital)
+
+2. Debt Funds
+   - user can create multiple debt funds
+
+3. Precious Metals
+   - user can create metals (Gold, Silver)
+
+4. Cash System
+   - Emergency Fund
+   - Opportunity Fund
+   - Free Cash
+
+IMPORTANT:
+- No asset names are hardcoded
+- Everything must be dynamic
+
+---------------------------------------
+3. DATA MODEL (VERY IMPORTANT)
+---------------------------------------
+
+System must store:
+
+1. Transactions
+2. Valuations
+3. Asset definitions
+4. SIP configurations
+5. Opportunity rules
+
+---------------------------------------
+4. TRANSACTION SYSTEM (CORE ENGINE)
+---------------------------------------
+
+All financial movement must come from transactions.
+
+Transaction types:
+- Deposit
+- Withdrawal
+- Transfer
+- Buy (invest into fund)
+- Sell (redeem from fund)
+- SIP (auto-generated grouped transactions)
+- Cash Tag Allocation
+
+Each transaction must have:
+- date
+- amount
+- source
+- destination
+- asset
+- category
+- tag (optional: emergency / opportunity)
+
+---------------------------------------
+5. SIP SYSTEM (VERY IMPORTANT)
+---------------------------------------
+
+SIP is NOT just planning — it must create transactions.
+
+User defines:
+- total monthly SIP amount
+- allocation % across:
+  - Equity
+  - Debt
+  - Metals
+  - Opportunity
+
+Then:
+Each category has sub-allocation (dynamic).
+
+Example:
+Equity → CAL 40%, NDB 40%, First Capital 20%
+
+---------------------------------------
+EXECUTE SIP
+---------------------------------------
+
+When user clicks "Execute SIP":
+
+System must:
+- create multiple transactions:
+  - invest into equity funds
+  - invest into debt funds
+  - invest into metals
+  - allocate to opportunity fund
+
+IMPORTANT RULE:
+- SIP must ONLY create transactions
+- It must NOT directly change asset value
+- Valuation controls asset value
+
+---------------------------------------
+6. VALUATION SYSTEM (CRITICAL)
+---------------------------------------
+
+System must NOT derive current value from transactions.
+
+Instead:
+
+Each asset has manual valuation updates.
+
+---------------------------------------
+CALCULATION RULES
+---------------------------------------
+
+For each asset:
+
+Invested Amount =
+    SUM(all Buy + SIP transactions)
+    - SUM(all Sell transactions)
+
+Current Value =
+    Latest valuation entry (manual input)
+
+Return =
+    Current Value - Invested Amount
+
+Return % =
+    (Return / Invested Amount) * 100
+
+---------------------------------------
+CRITICAL RULES
+---------------------------------------
+
+- NO double counting
+- SIP must not increase value directly
+- valuation must override current value
+- transactions only affect invested amount
+
+---------------------------------------
+7. GLOBAL CONSISTENCY (VERY IMPORTANT)
+---------------------------------------
+
+System must follow:
+
+👉 Single Source of Truth
+
+Create ONE central calculation engine:
+
+PortfolioCalculationService
+
+This service must compute:
+- invested
+- current value
+- return
+- return %
+
+ALL pages must use this:
+- Dashboard
+- Portfolio
+- Asset Details
+- Performance
+
+---------------------------------------
+8. OPPORTUNITY FUND SYSTEM
+---------------------------------------
+
+User defines market drop rules:
+
+Each rule:
+- drop percentage (e.g. 10%)
+- deploy percentage (e.g. 25%)
+
+Example:
+
+| Drop | Deploy |
+|------|--------|
+| 10%  | 25%    |
+| 15%  | 50%    |
+| 20%  | 75%    |
+| 25%  | 100%   |
+
+---------------------------------------
+SYSTEM BEHAVIOR
+---------------------------------------
+
+When market drop is entered:
+
+System must:
+- calculate deployable amount
+- based on opportunity fund balance
+- show deployment status
+
+---------------------------------------
+9. REBALANCING SYSTEM
+---------------------------------------
+
+System compares:
+- target allocation (configured)
+- actual allocation (calculated)
+
+If deviation > threshold:
+- show drift
+- suggest actions
+
+---------------------------------------
+10. UI & VISUALIZATION RULES
+---------------------------------------
+
+Charts must be:
+- readable
+- properly labeled
+- show value + percentage
+- have tooltips
+
+Use:
+- pie charts → allocation
+- bar charts → comparison
+- line charts → growth
+
+---------------------------------------
+11. ERROR HANDLING
+---------------------------------------
+
+System must prevent:
+- negative balances
+- invalid allocation %
+- duplicate counting
+- missing valuation errors
+
+---------------------------------------
+12. FINAL EXPECTATION
+---------------------------------------
+
+This system must behave like:
+
+👉 A financial engine with accurate calculations
+👉 A decision-support system
+👉 A clean visual dashboard
+
+NOT:
+❌ a basic CRUD app
+❌ a static UI
+❌ a hardcoded system

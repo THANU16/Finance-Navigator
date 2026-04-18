@@ -1,71 +1,43 @@
 import { Router } from "express";
-import { db, assetsTable, valuationsTable, sipHistoryTable } from "@workspace/db";
-import { eq, and, desc } from "drizzle-orm";
+import { db, assetsTable, valuationsTable, sipHistoryTable, transactionsTable } from "@workspace/db";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { getPortfolioMetrics } from "../lib/portfolio";
 
 const router = Router();
 router.use(requireAuth);
 
 router.get("/performance", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  const period = (req.query.period as string) || "all";
 
-  const assets = await db.select().from(assetsTable).where(and(eq(assetsTable.userId, userId), eq(assetsTable.isActive, true)));
+  const [portfolio, sipHistory] = await Promise.all([
+    getPortfolioMetrics(userId),
+    db.select().from(sipHistoryTable).where(eq(sipHistoryTable.userId, userId)),
+  ]);
 
-  const totalInvested = assets.reduce((s, a) => s + Number(a.investedValue), 0);
-  const totalCurrent = assets.reduce((s, a) => {
-    return s + (a.units && a.nav ? Number(a.units) * Number(a.nav) : a.units && a.pricePerUnit ? Number(a.units) * Number(a.pricePerUnit) : 0);
-  }, 0);
-  const totalReturn = totalCurrent - totalInvested;
-  const totalReturnPercent = totalInvested > 0 ? (totalReturn / totalInvested) * 100 : 0;
-
-  // CAGR — simplified, based on oldest valuation
-  let cagr: number | null = null;
-  const allVals = await db.select().from(valuationsTable)
-    .where(eq(valuationsTable.assetId, assets[0]?.id ?? 0))
-    .orderBy(valuationsTable.date)
-    .limit(1);
-  if (allVals.length > 0 && totalInvested > 0) {
-    const years = (new Date().getTime() - new Date(allVals[0].date).getTime()) / (1000 * 60 * 60 * 24 * 365);
-    if (years > 0.1) {
-      cagr = (Math.pow(totalCurrent / totalInvested, 1 / years) - 1) * 100;
-    }
-  }
-
-  const categoryMap: Record<string, string> = {
-    equity_fund: "Equity Funds",
-    debt_fund: "Debt Funds",
-    metal: "Precious Metals",
-  };
-
-  const categoryPerformance = ["equity_fund", "debt_fund", "metal"].map(cat => {
-    const catAssets = assets.filter(a => a.category === cat);
-    const invested = catAssets.reduce((s, a) => s + Number(a.investedValue), 0);
-    const current = catAssets.reduce((s, a) => {
-      return s + (a.units && a.nav ? Number(a.units) * Number(a.nav) : a.units && a.pricePerUnit ? Number(a.units) * Number(a.pricePerUnit) : 0);
-    }, 0);
-    return {
-      category: categoryMap[cat],
-      invested,
-      currentValue: current,
-      returnAmount: current - invested,
-      returnPercent: invested > 0 ? ((current - invested) / invested) * 100 : 0,
-    };
-  });
-
-  // SIP performance
-  const sipHistory = await db.select().from(sipHistoryTable).where(eq(sipHistoryTable.userId, userId));
+  // SIP invested = sum of all SIP execution amounts
   const sipTotalInvested = sipHistory.reduce((s, h) => s + Number(h.totalAmount), 0);
-  const sipReturn = totalReturn * 0.7; // Approximate
+
+  // SIP current value = investedAmount * (portfolio return ratio), pro-rated to SIP portion
+  // Use the actual portfolio ratio, not an approximation
+  const portfolioReturnRatio = portfolio.totalInvested > 0 ? portfolio.totalCurrentValue / portfolio.totalInvested : 1;
+  const sipCurrentValue = sipTotalInvested * portfolioReturnRatio;
+  const sipReturn = sipCurrentValue - sipTotalInvested;
 
   res.json({
-    totalReturn,
-    totalReturnPercent,
-    cagr,
-    categoryPerformance,
-    drawdown: Math.min(0, totalReturnPercent),
+    totalReturn: portfolio.totalReturn,
+    totalReturnPercent: portfolio.totalReturnPercent,
+    cagr: portfolio.cagr,
+    categoryPerformance: portfolio.categoryMetrics.map((c) => ({
+      category: c.category,
+      invested: c.investedAmount,
+      currentValue: c.currentValue,
+      returnAmount: c.returnAmount,
+      returnPercent: c.returnPercent,
+    })),
+    drawdown: Math.min(0, portfolio.totalReturnPercent),
     sipTotalInvested,
-    sipCurrentValue: sipTotalInvested + sipReturn,
+    sipCurrentValue,
     sipReturn,
   });
 });
@@ -74,48 +46,82 @@ router.get("/growth", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
   const period = (req.query.period as string) || "all";
 
-  const assets = await db.select().from(assetsTable).where(eq(assetsTable.userId, userId));
+  const assets = await db
+    .select()
+    .from(assetsTable)
+    .where(and(eq(assetsTable.userId, userId), eq(assetsTable.isActive, true)));
 
-  // Get all valuations grouped by date
-  const allVals: { date: string; value: number }[] = [];
-  for (const asset of assets) {
-    const vals = await db.select().from(valuationsTable).where(eq(valuationsTable.assetId, asset.id)).orderBy(valuationsTable.date);
-    vals.forEach(v => allVals.push({ date: v.date, value: Number(v.value) }));
+  const investmentAssets = assets.filter((a) => a.category !== "cash");
+  const assetIds = investmentAssets.map((a) => a.id);
+
+  if (assetIds.length === 0) {
+    res.json([]);
+    return;
   }
 
-  // Group by date
-  const dateMap = new Map<string, number>();
-  allVals.forEach(v => {
-    dateMap.set(v.date, (dateMap.get(v.date) || 0) + v.value);
-  });
+  // Get all valuations for these assets, ordered by date
+  const allVals = await db
+    .select()
+    .from(valuationsTable)
+    .where(inArray(valuationsTable.assetId, assetIds))
+    .orderBy(valuationsTable.date);
 
-  const totalInvested = assets.reduce((s, a) => s + Number(a.investedValue), 0);
-  const sortedDates = Array.from(dateMap.keys()).sort();
+  // Compute invested amount from transactions
+  const allTxs = await db
+    .select()
+    .from(transactionsTable)
+    .where(eq(transactionsTable.userId, userId));
+
+  const investedByAsset = new Map<number, number>();
+  for (const tx of allTxs) {
+    if (!tx.assetId) continue;
+    const prev = investedByAsset.get(tx.assetId) ?? 0;
+    if (tx.type === "invest" || tx.type === "sip") {
+      investedByAsset.set(tx.assetId, prev + Number(tx.amount));
+    } else if (tx.type === "redeem") {
+      investedByAsset.set(tx.assetId, Math.max(0, prev - Number(tx.amount)));
+    }
+  }
+  const totalInvested = Array.from(investedByAsset.values()).reduce((s, v) => s + v, 0);
+
+  // Group valuations by assetId for forward-fill approach
+  const valsByAsset = new Map<number, Array<{ date: string; value: number }>>();
+  for (const v of allVals) {
+    if (!valsByAsset.has(v.assetId)) valsByAsset.set(v.assetId, []);
+    valsByAsset.get(v.assetId)!.push({ date: v.date, value: Number(v.value) });
+  }
+
+  // Collect all unique dates
+  const allDates = [...new Set(allVals.map((v) => v.date))].sort();
+
+  // For each date, compute total portfolio value (sum of each asset's latest valuation on or before that date)
+  const growthData = allDates.map((date) => {
+    let totalValue = 0;
+    for (const [, vals] of valsByAsset) {
+      // Find latest val on or before this date
+      const relevant = vals.filter((v) => v.date <= date);
+      if (relevant.length > 0) {
+        totalValue += relevant[relevant.length - 1].value;
+      }
+    }
+    return { date, totalValue, invested: totalInvested };
+  });
 
   // Filter by period
   const now = new Date();
   const periodMap: Record<string, number> = { "1m": 30, "3m": 90, "6m": 180, "1y": 365 };
-  const days = periodMap[period] || 99999;
+  const days = periodMap[period] ?? 99999;
   const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+  const filtered = period === "all" ? growthData : growthData.filter((d) => d.date >= cutoff);
 
-  const filteredDates = period === "all" ? sortedDates : sortedDates.filter(d => d >= cutoff);
-
-  if (filteredDates.length === 0) {
+  if (filtered.length === 0) {
     // Return current snapshot
-    const totalCurrent = assets.reduce((s, a) => {
-      return s + (a.units && a.nav ? Number(a.units) * Number(a.nav) : a.units && a.pricePerUnit ? Number(a.units) * Number(a.pricePerUnit) : 0);
-    }, 0);
-    res.json([{ date: now.toISOString().split("T")[0], totalValue: totalCurrent, invested: totalInvested }]);
+    const portfolio = await getPortfolioMetrics(userId);
+    res.json([{ date: now.toISOString().split("T")[0], totalValue: portfolio.totalCurrentValue, invested: portfolio.totalInvested }]);
     return;
   }
 
-  const result = filteredDates.map(date => ({
-    date,
-    totalValue: dateMap.get(date) || 0,
-    invested: totalInvested,
-  }));
-
-  res.json(result);
+  res.json(filtered);
 });
 
 export default router;
