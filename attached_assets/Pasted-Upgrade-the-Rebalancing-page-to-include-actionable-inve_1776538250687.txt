@@ -1,0 +1,113 @@
+Upgrade the Rebalancing page to include actionable investment planning.
+
+---------------------------------------
+NEW FEATURE 1 — FULL REBALANCE PLAN
+---------------------------------------
+
+Add section:
+
+👉 "Full Rebalance Plan"
+
+Purpose:
+Calculate exact amount needed to fully align portfolio with target allocation.
+
+---------------------------------------
+LOGIC
+---------------------------------------
+
+For each category:
+
+Required Value =
+    Target % × Total Portfolio Value
+
+Gap =
+    Required Value - Current Value
+
+If Gap > 0:
+→ user must invest this amount
+
+If Gap < 0:
+→ asset is overweight
+
+---
+
+Also calculate per asset (sub-funds).
+
+---
+
+OUTPUT:
+- total amount required
+- per category allocation
+- per asset allocation
+
+---
+
+---------------------------------------
+NEW FEATURE 2 — LIMITED BUDGET PLAN
+---------------------------------------
+
+Add input:
+
+👉 "Enter Available Investment Amount"
+
+User enters amount (e.g. 100,000 LKR)
+
+---
+
+---------------------------------------
+LOGIC
+---------------------------------------
+
+1. Identify all underweight assets
+
+2. Calculate total positive gap
+
+3. Distribute amount proportionally:
+
+Allocation =
+    (Asset Gap / Total Gap) × Available Amount
+
+---
+
+---------------------------------------
+OUTPUT
+---------------------------------------
+
+Show:
+
+- how much to invest per category
+- how much per fund
+- percentages
+
+---
+
+---------------------------------------
+UI REQUIREMENTS
+---------------------------------------
+
+- table format
+- clean allocation display
+- color code:
+  - green = invest
+  - red = reduce
+  - yellow = warning
+
+---
+
+---------------------------------------
+IMPORTANT RULES
+---------------------------------------
+
+- do NOT allocate to overweight assets
+- must follow category hierarchy
+- must use latest valuation data
+- must recalculate dynamically
+
+---
+
+---------------------------------------
+EXPECTED RESULT
+---------------------------------------
+
+System must not only show drift,
+but also provide clear investment plan.
