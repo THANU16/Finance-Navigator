@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { requireAuth } from "../lib/auth";
 import { getPortfolioMetrics, getPortfolioTotalValue } from "../lib/portfolio";
+import {
+  getLatestAccountValuationsMap,
+  sumEffectiveBalances,
+} from "../lib/account-balances";
 import { db, accountsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 
@@ -22,7 +26,8 @@ router.get("/summary", async (req, res): Promise<void> => {
     .from(accountsTable)
     .where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)));
 
-  const totalCashValue = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
+  const totalCashValue = sumEffectiveBalances(accounts, latestMap);
   const totalPortfolioValue = metrics.totalCurrentValue + totalCashValue;
 
   res.json({
@@ -65,7 +70,8 @@ router.post("/recalculate", async (req, res): Promise<void> => {
     .from(accountsTable)
     .where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)));
 
-  const totalCashValue = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
+  const totalCashValue = sumEffectiveBalances(accounts, latestMap);
   const totalPortfolioValue = metrics.totalCurrentValue + totalCashValue;
 
   res.json({

@@ -2,6 +2,10 @@ import { Router } from "express";
 import { db, accountsTable, deploymentsTable, settingsTable, assetsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import {
+  getLatestAccountValuationsMap,
+  sumEffectiveBalances,
+} from "../lib/account-balances";
 import { RecordDeploymentBody } from "@workspace/api-zod";
 
 const router = Router();
@@ -11,7 +15,8 @@ router.get("/", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
 
   const accounts = await db.select().from(accountsTable).where(and(eq(accountsTable.userId, userId), eq(accountsTable.tag, "opportunity"), eq(accountsTable.isActive, true)));
-  const availableAmount = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
+  const availableAmount = sumEffectiveBalances(accounts, latestMap);
 
   const deployments = await db.select().from(deploymentsTable).where(eq(deploymentsTable.userId, userId));
   const totalDeployed = deployments.reduce((s, d) => s + Number(d.deployedAmount), 0);
