@@ -84,3 +84,18 @@ Run `pnpm --filter @workspace/scripts run seed-defaults` to backfill users creat
 
 - Email: test@pims.lk
 - Password: test1234
+
+## Account Balance Resolution
+
+Cash/bank account balances are resolved via `artifacts/api-server/src/lib/account-balances.ts`:
+- `getLatestAccountValuationsMap(accountIds)` — returns latest snapshot per account
+- `effectiveAccountBalance(account, latestValuation)` — uses latest valuation if present, falls back to `account.balance` (principal)
+- `sumEffectiveBalances(accounts, map)` — total
+
+This helper is the source of truth for cash balances across `dashboard`, `accounts`, `portfolio`, and `opportunity` routes. Always use it instead of `Number(account.balance)` so users who track current value via valuation snapshots see correct emergency fund / opportunity / cash totals.
+
+## Production Deployment
+
+- Build: `pnpm install --frozen-lockfile && pnpm --filter @workspace/db run push`
+- Run: api-server (built) on 8080 + pims dev on 5000
+- After redeploy, run `pnpm --filter @workspace/scripts run seed-defaults` against prod DB to backfill missing settings/sip_configs for existing users.

@@ -316,8 +316,9 @@ export async function getPortfolioTotalValue(userId: number): Promise<number> {
     .select()
     .from(accountsTable)
     .where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)));
-  const cashValue = accounts
-    .filter((a) => a.subCategory !== "investment")
-    .reduce((s, a) => s + Number(a.balance), 0);
+  const cashAccounts = accounts.filter((a) => a.subCategory !== "investment");
+  const { getLatestAccountValuationsMap, sumEffectiveBalances } = await import("./account-balances");
+  const latestMap = await getLatestAccountValuationsMap(cashAccounts.map((a) => a.id));
+  const cashValue = sumEffectiveBalances(cashAccounts, latestMap);
   return metrics.totalCurrentValue + cashValue;
 }
