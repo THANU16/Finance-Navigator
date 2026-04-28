@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { db, usersTable, passwordResetsTable, settingsTable, sipConfigsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { signToken, requireAuth } from "../lib/auth";
+import { DEFAULT_USER_SETTINGS, DEFAULT_USER_SIP_CONFIG } from "../lib/defaults";
 import { RegisterUserBody, LoginUserBody, ForgotPasswordBody, ResetPasswordBody } from "@workspace/api-zod";
 
 const router = Router();
@@ -25,8 +26,14 @@ router.post("/register", async (req, res): Promise<void> => {
   const [user] = await db.insert(usersTable).values({ name, email, passwordHash }).returning();
 
   // Create default settings and SIP config for new user
-  await db.insert(settingsTable).values({ userId: user.id }).onConflictDoNothing();
-  await db.insert(sipConfigsTable).values({ userId: user.id }).onConflictDoNothing();
+  await db
+    .insert(settingsTable)
+    .values({ userId: user.id, ...DEFAULT_USER_SETTINGS })
+    .onConflictDoNothing();
+  await db
+    .insert(sipConfigsTable)
+    .values({ userId: user.id, ...DEFAULT_USER_SIP_CONFIG })
+    .onConflictDoNothing();
 
   const token = signToken({ userId: user.id, email: user.email });
   res.status(201).json({

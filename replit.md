@@ -41,6 +41,22 @@ A professional full-stack financial portfolio management application built for S
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `pnpm --filter @workspace/scripts run seed-defaults` — backfill default settings/SIP config for existing users
+
+## Default User Settings
+
+New users are auto-provisioned (in `auth.ts /register`) with sensible defaults from `artifacts/api-server/src/lib/defaults.ts`:
+
+- `emergencyFundRequired`: 500,000 LKR
+- `emergencyFundLowThreshold`: 80%
+- `emergencyFundCriticalThreshold`: 50%
+- `rebalancingDriftTolerance`: 5%
+- `crashDropLevels`: [10, 15, 20, 25]
+- `crashDeploymentStrategy`: { 10: 25, 15: 50, 20: 75, 25: 100 }
+- `currency`: LKR
+- SIP allocation: 60% equity / 20% debt / 10% metals / 10% opportunity
+
+Run `pnpm --filter @workspace/scripts run seed-defaults` to backfill users created before this defaults system was added.
 
 ## Architecture
 
