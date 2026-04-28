@@ -1,7 +1,11 @@
 import { Router } from "express";
 import { db, accountsTable, accountValuationsTable, transactionsTable } from "@workspace/db";
-import { eq, and, gte, desc, inArray } from "drizzle-orm";
+import { eq, and, gte, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import {
+  getLatestAccountValuationsMap,
+  effectiveAccountBalance,
+} from "../lib/account-balances";
 import { CreateAccountBody, UpdateAccountBody, AddAccountValuationBody } from "@workspace/api-zod";
 
 const router = Router();
@@ -41,36 +45,17 @@ function formatValuation(v: ValuationRow) {
   };
 }
 
-// Get latest valuation per account in a single query
-async function getLatestValuationsMap(accountIds: number[]): Promise<Map<number, ValuationRow>> {
-  if (accountIds.length === 0) return new Map();
-  const all = await db
-    .select()
-    .from(accountValuationsTable)
-    .where(inArray(accountValuationsTable.accountId, accountIds))
-    .orderBy(desc(accountValuationsTable.date), desc(accountValuationsTable.id));
-  const map = new Map<number, ValuationRow>();
-  for (const v of all) {
-    if (!map.has(v.accountId)) map.set(v.accountId, v);
-  }
-  return map;
-}
-
 router.get("/summary", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
   const accounts = await db.select().from(accountsTable).where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)));
 
-  const latestMap = await getLatestValuationsMap(accounts.map((a) => a.id));
-  // currentBalance = latest valuation if present else principal
-  const effectiveBalance = (a: AccountRow) => {
-    const v = latestMap.get(a.id);
-    return v ? Number(v.value) : Number(a.balance);
-  };
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
+  const effBalance = (a: AccountRow) => effectiveAccountBalance(a, latestMap.get(a.id));
 
-  const totalBalance     = accounts.reduce((s, a) => s + effectiveBalance(a), 0);
-  const emergencyFund    = accounts.filter((a) => a.tag === "emergency").reduce((s, a) => s + effectiveBalance(a), 0);
-  const opportunityFund  = accounts.filter((a) => a.tag === "opportunity").reduce((s, a) => s + effectiveBalance(a), 0);
-  const freeCash         = accounts.filter((a) => a.tag === "free").reduce((s, a) => s + effectiveBalance(a), 0);
+  const totalBalance     = accounts.reduce((s, a) => s + effBalance(a), 0);
+  const emergencyFund    = accounts.filter((a) => a.tag === "emergency").reduce((s, a) => s + effBalance(a), 0);
+  const opportunityFund  = accounts.filter((a) => a.tag === "opportunity").reduce((s, a) => s + effBalance(a), 0);
+  const freeCash         = accounts.filter((a) => a.tag === "free").reduce((s, a) => s + effBalance(a), 0);
 
   // Calculate monthly inflow/outflow from transactions this month
   const now = new Date();
@@ -85,7 +70,7 @@ router.get("/summary", async (req, res): Promise<void> => {
 router.get("/", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
   const accounts = await db.select().from(accountsTable).where(eq(accountsTable.userId, userId));
-  const latestMap = await getLatestValuationsMap(accounts.map((a) => a.id));
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
   res.json(accounts.map((a) => formatAccount(a, latestMap.get(a.id))));
 });
 

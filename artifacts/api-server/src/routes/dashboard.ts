@@ -3,6 +3,11 @@ import { db, accountsTable, settingsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { getPortfolioMetrics } from "../lib/portfolio";
+import {
+  getLatestAccountValuationsMap,
+  effectiveAccountBalance,
+  sumEffectiveBalances,
+} from "../lib/account-balances";
 
 const router = Router();
 router.use(requireAuth);
@@ -24,7 +29,8 @@ router.get("/summary", async (req, res): Promise<void> => {
   ]);
 
   const settings = settingsRows[0];
-  const totalCashValue = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
+  const totalCashValue = sumEffectiveBalances(accounts, latestMap);
   const totalValue = portfolio.totalCurrentValue + totalCashValue;
 
   // Allocation by category — uses accurate currentValue from portfolio service
@@ -39,11 +45,17 @@ router.get("/summary", async (req, res): Promise<void> => {
     };
   });
 
-  // Emergency fund
+  // Emergency fund — uses latest valuation if present, else principal
   const emergencyFundRequired = settings ? Number(settings.emergencyFundRequired) : 0;
-  const emergencyFundCurrent = accounts.filter((a) => a.tag === "emergency").reduce((s, a) => s + Number(a.balance), 0);
+  const emergencyFundCurrent = sumEffectiveBalances(
+    accounts.filter((a) => a.tag === "emergency"),
+    latestMap,
+  );
   const emergencyFundPercent = emergencyFundRequired > 0 ? (emergencyFundCurrent / emergencyFundRequired) * 100 : 0;
-  const cashAvailable = accounts.filter((a) => a.tag === "free").reduce((s, a) => s + Number(a.balance), 0);
+  const cashAvailable = sumEffectiveBalances(
+    accounts.filter((a) => a.tag === "free"),
+    latestMap,
+  );
 
   // Best/worst category by return %
   const sortedCats = [...portfolio.categoryMetrics].sort((a, b) => b.returnPercent - a.returnPercent);
@@ -85,9 +97,13 @@ router.get("/alerts", async (req, res): Promise<void> => {
   ]);
 
   const settings = settingsRows[0];
+  const latestMap = await getLatestAccountValuationsMap(accounts.map((a) => a.id));
   if (settings) {
     const emergencyRequired = Number(settings.emergencyFundRequired);
-    const emergencyCurrent = accounts.filter((a) => a.tag === "emergency").reduce((acc, a) => acc + Number(a.balance), 0);
+    const emergencyCurrent = sumEffectiveBalances(
+      accounts.filter((a) => a.tag === "emergency"),
+      latestMap,
+    );
     const pct = emergencyRequired > 0 ? (emergencyCurrent / emergencyRequired) * 100 : 100;
     const criticalThreshold = Number(settings.emergencyFundCriticalThreshold);
     const lowThreshold = Number(settings.emergencyFundLowThreshold);
@@ -109,7 +125,10 @@ router.get("/alerts", async (req, res): Promise<void> => {
     }
   }
 
-  const freeCash = accounts.filter((a) => a.tag === "free").reduce((s, a) => s + Number(a.balance), 0);
+  const freeCash = sumEffectiveBalances(
+    accounts.filter((a) => a.tag === "free"),
+    latestMap,
+  );
   if (freeCash > 100000) {
     alerts.push({ id: alertId++, type: "idle_cash", message: `High idle cash (LKR ${freeCash.toLocaleString()}) — consider deploying`, severity: "info", createdAt: now });
   }
