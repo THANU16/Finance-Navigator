@@ -94,8 +94,15 @@ Cash/bank account balances are resolved via `artifacts/api-server/src/lib/accoun
 
 This helper is the source of truth for cash balances across `dashboard`, `accounts`, `portfolio`, and `opportunity` routes. Always use it instead of `Number(account.balance)` so users who track current value via valuation snapshots see correct emergency fund / opportunity / cash totals.
 
+## API Routing (dev + prod)
+
+- Frontend Vite dev server: port 5000 (externally exposed)
+- API server: port 8080 (internal only)
+- The Vite config in `artifacts/pims/vite.config.ts` proxies `/api/*` from port 5000 → `http://localhost:8080` (override with `API_PROXY_TARGET` env var). This proxy is enabled for both `server` (dev) and `preview` modes.
+- Without this proxy, all browser API calls (`/api/auth/login`, `/api/accounts`, `/api/assets`, etc.) get the SPA HTML fallback or 404, which manifests as "create account" / "create asset" silently failing.
+
 ## Production Deployment
 
 - Build: `pnpm install --frozen-lockfile && pnpm --filter @workspace/db run push`
-- Run: api-server (built) on 8080 + pims dev on 5000
+- Run: api-server (built) on 8080 + pims dev on 5000 (Vite proxy handles `/api`)
 - After redeploy, run `pnpm --filter @workspace/scripts run seed-defaults` against prod DB to backfill missing settings/sip_configs for existing users.
