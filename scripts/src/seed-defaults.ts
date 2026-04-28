@@ -1,5 +1,5 @@
-import { db, usersTable, settingsTable, sipConfigsTable, pool } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, usersTable, settingsTable, sipConfigsTable, accountsTable, pool } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
 
 const DEFAULT_USER_SETTINGS = {
   emergencyFundRequired: "500000",
@@ -27,6 +27,21 @@ async function main() {
   let settingsCreated = 0;
   let settingsBackfilled = 0;
   let sipCreated = 0;
+
+  // Backfill `principal` for existing accounts that were created before the
+  // principal/balance separation. We treat the current ledger balance as the
+  // best-known principal — but ONLY when it's positive. A negative ledger
+  // means the account's transactions have drifted (e.g. "invest" recorded
+  // without a matching "deposit"), so leave principal at 0 and let the user
+  // correct it from the account edit form.
+  const principalBackfill = await db
+    .update(accountsTable)
+    .set({ principal: sql`${accountsTable.balance}` })
+    .where(sql`${accountsTable.principal} = 0 AND ${accountsTable.balance} > 0`)
+    .returning({ id: accountsTable.id });
+  if (principalBackfill.length > 0) {
+    console.log(`  ~ Backfilled principal for ${principalBackfill.length} account(s)`);
+  }
 
   for (const user of users) {
     const [existingSettings] = await db

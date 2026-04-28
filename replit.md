@@ -87,12 +87,17 @@ Run `pnpm --filter @workspace/scripts run seed-defaults` to backfill users creat
 
 ## Account Balance Resolution
 
-Cash/bank account balances are resolved via `artifacts/api-server/src/lib/account-balances.ts`:
-- `getLatestAccountValuationsMap(accountIds)` — returns latest snapshot per account
-- `effectiveAccountBalance(account, latestValuation)` — uses latest valuation if present, falls back to `account.balance` (principal)
+The `accounts` table has TWO numeric columns and they mean different things:
+
+- **`principal`** — snapshot of the user's deposit. Set on account create / explicit edit, **NEVER** mutated by transactions. Used as "principal" everywhere we display interest = current − principal.
+- **`balance`** — running ledger after transactions (deposit/withdrawal/invest/redeem/transfer). Can drift negative when an `invest` outflow has no matching `deposit` inflow. **Not used for any user-facing display.**
+
+Resolution helpers in `artifacts/api-server/src/lib/account-balances.ts`:
+- `getLatestAccountValuationsMap(accountIds)` — latest valuation snapshot per account
+- `effectiveAccountBalance(account, latestValuation)` — `latestValuation.value` if present, else `account.principal` (NOT `balance` — the ledger may have drifted)
 - `sumEffectiveBalances(accounts, map)` — total
 
-This helper is the source of truth for cash balances across `dashboard`, `accounts`, `portfolio`, and `opportunity` routes. Always use it instead of `Number(account.balance)` so users who track current value via valuation snapshots see correct emergency fund / opportunity / cash totals.
+This helper is the source of truth for cash balances across `dashboard`, `accounts`, `portfolio`, and `opportunity`. Always use it instead of `Number(account.balance)` so users see correct emergency fund / opportunity / cash totals regardless of ledger drift.
 
 ## API Routing (dev + prod)
 

@@ -163,7 +163,7 @@ export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetr
   // Add bank investment accounts as virtual portfolio items.
   // Use negative IDs to avoid collision with real asset IDs.
   const bankRawMetrics = bankInvestmentAccounts.map((acc) => {
-    const investedAmount = Number(acc.balance);                                   // principal
+    const investedAmount = Number(acc.principal);                                 // principal snapshot
     const currentValue   = latestAccValMap.get(acc.id) ?? investedAmount;         // latest valuation or principal
     const returnAmount   = currentValue - investedAmount;                         // interest earned
     const returnPercent  = investedAmount > 0 ? (returnAmount / investedAmount) * 100 : 0;
