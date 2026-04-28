@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import {
   Plus, MoreHorizontal, Pencil, Trash2, Loader2,
-  ArrowDownToLine, ArrowUpFromLine, ArrowRightLeft,
+  ArrowRightLeft,
   PiggyBank, RefreshCcw, HandCoins, Tags,
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -25,18 +25,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const TX_TYPES = [
-  { value: "deposit",       label: "Deposit",        icon: <ArrowDownToLine  className="h-4 w-4 text-green-500" /> },
-  { value: "withdrawal",    label: "Withdrawal",      icon: <ArrowUpFromLine  className="h-4 w-4 text-red-500" /> },
-  { value: "transfer",      label: "Transfer",        icon: <ArrowRightLeft   className="h-4 w-4 text-blue-500" /> },
   { value: "invest",        label: "Invest",          icon: <PiggyBank        className="h-4 w-4 text-primary" /> },
-  { value: "redeem",        label: "Redeem",          icon: <HandCoins        className="h-4 w-4 text-yellow-500" /> },
-  { value: "sip",           label: "SIP",             icon: <RefreshCcw       className="h-4 w-4 text-primary" /> },
+  { value: "sip",           label: "SIP (Recurring Invest)", icon: <RefreshCcw className="h-4 w-4 text-primary" /> },
+  { value: "redeem",        label: "Redeem",          icon: <HandCoins        className="h-4 w-4 text-green-500" /> },
+  { value: "transfer",      label: "Transfer (Between Accounts)", icon: <ArrowRightLeft className="h-4 w-4 text-blue-500" /> },
   { value: "tag_allocation",label: "Tag Allocation",  icon: <Tags             className="h-4 w-4 text-purple-500" /> },
 ];
 
 const TYPE_COLOR: Record<string, string> = {
-  deposit: "text-green-500", redeem: "text-green-500",
-  withdrawal: "text-red-500", invest: "text-red-500", sip: "text-red-500",
+  redeem: "text-green-500",
+  invest: "text-red-500", sip: "text-red-500",
   transfer: "text-blue-500", tag_allocation: "text-purple-500",
 };
 
@@ -46,16 +44,18 @@ interface TxFormData {
   tag: string; note: string;
 }
 const EMPTY_FORM: TxFormData = {
-  type: "deposit", amount: "", date: new Date().toISOString().slice(0, 10),
+  type: "invest", amount: "", date: new Date().toISOString().slice(0, 10),
   assetId: "", sourceAccountId: "", destinationAccountId: "", tag: "", note: "",
 };
 
 type TxRow = { id: number; type: string; amount: number; date: string; assetId?: number | null; assetName?: string | null; tag?: string | null; note?: string | null; sourceAccountId?: number | null; destinationAccountId?: number | null; };
 
-// Types that make sense with an asset
-const ASSET_TYPES = ["invest", "redeem", "sip"];
-// Types that use accounts
-const ACCOUNT_TYPES_TX = ["deposit", "withdrawal", "transfer"];
+// Show asset selector for these types
+const ASSET_TYPES   = ["invest", "redeem", "sip"];
+// Show "From Account" (source) for these types — money LEAVES this account
+const SOURCE_TYPES  = ["invest", "sip", "transfer"];
+// Show "To Account" (destination) for these types — money ENTERS this account
+const DEST_TYPES    = ["redeem", "transfer"];
 
 export default function Transactions() {
   const { toast }   = useToast();
@@ -133,8 +133,9 @@ export default function Transactions() {
   };
 
   const isBusy = createMutation.isPending || updateMutation.isPending;
-  const showAsset    = ASSET_TYPES.includes(form.type);
-  const showAccounts = ACCOUNT_TYPES_TX.includes(form.type);
+  const showAsset  = ASSET_TYPES.includes(form.type);
+  const showSource = SOURCE_TYPES.includes(form.type);
+  const showDest   = DEST_TYPES.includes(form.type);
 
   const typeInfo = (t: string) => TX_TYPES.find(x => x.value === t);
 
@@ -260,28 +261,40 @@ export default function Transactions() {
               </div>
             )}
 
-            {showAccounts && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>From Account</Label>
-                  <Select value={form.sourceAccountId || "none"} onValueChange={v => set("sourceAccountId", v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— None —</SelectItem>
-                      {accounts?.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>To Account</Label>
-                  <Select value={form.destinationAccountId || "none"} onValueChange={v => set("destinationAccountId", v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">— None —</SelectItem>
-                      {accounts?.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
+            {(showSource || showDest) && (
+              <div className={`grid gap-4 ${showSource && showDest ? "grid-cols-2" : "grid-cols-1"}`}>
+                {showSource && (
+                  <div className="space-y-2">
+                    <Label>{form.type === "transfer" ? "From Account" : "Funded From (Bank Account)"}</Label>
+                    <Select value={form.sourceAccountId || "none"} onValueChange={v => set("sourceAccountId", v === "none" ? "" : v)}>
+                      <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— None —</SelectItem>
+                        {accounts?.map(a => (
+                          <SelectItem key={a.id} value={String(a.id)}>
+                            {a.name}{(a as any).subCategory ? ` · ${(a as any).subCategory}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {showDest && (
+                  <div className="space-y-2">
+                    <Label>{form.type === "transfer" ? "To Account" : "Deposited To (Bank Account)"}</Label>
+                    <Select value={form.destinationAccountId || "none"} onValueChange={v => set("destinationAccountId", v === "none" ? "" : v)}>
+                      <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">— None —</SelectItem>
+                        {accounts?.map(a => (
+                          <SelectItem key={a.id} value={String(a.id)}>
+                            {a.name}{(a as any).subCategory ? ` · ${(a as any).subCategory}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             )}
 

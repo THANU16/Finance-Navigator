@@ -12,7 +12,7 @@
  * No other file should re-implement these calculations.
  */
 
-import { db, assetsTable, valuationsTable, transactionsTable, accountsTable } from "@workspace/db";
+import { db, assetsTable, valuationsTable, transactionsTable, accountsTable, accountValuationsTable } from "@workspace/db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 
 export interface AssetMetrics {
@@ -59,6 +59,7 @@ const CATEGORY_NAMES: Record<string, string> = {
   debt_fund: "Debt Funds",
   metal: "Precious Metals",
   cash: "Cash",
+  bank_investment: "Bank Investments",
 };
 
 export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetrics> {
@@ -69,18 +70,17 @@ export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetr
 
   const investmentAssets = assets.filter((a) => a.category !== "cash");
 
-  if (investmentAssets.length === 0) {
-    return {
-      assets: [],
-      totalInvested: 0,
-      totalCurrentValue: 0,
-      totalReturn: 0,
-      totalReturnPercent: 0,
-      cagr: null,
-      firstInvestmentDate: null,
-      categoryMetrics: [],
-    };
-  }
+  // Bank accounts that act as investments (FDs, money market, interest-bearing)
+  const bankInvestmentAccounts = await db
+    .select()
+    .from(accountsTable)
+    .where(
+      and(
+        eq(accountsTable.userId, userId),
+        eq(accountsTable.isActive, true),
+        eq(accountsTable.subCategory, "investment")
+      )
+    );
 
   const assetIds = investmentAssets.map((a) => a.id);
 
@@ -91,11 +91,27 @@ export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetr
     .where(eq(transactionsTable.userId, userId));
 
   // Batch: all valuations for these assets, ordered latest-first
-  const allVals = await db
-    .select()
-    .from(valuationsTable)
-    .where(inArray(valuationsTable.assetId, assetIds))
-    .orderBy(desc(valuationsTable.date));
+  const allVals = assetIds.length > 0
+    ? await db
+        .select()
+        .from(valuationsTable)
+        .where(inArray(valuationsTable.assetId, assetIds))
+        .orderBy(desc(valuationsTable.date))
+    : [];
+
+  // Batch: latest valuations for bank investment accounts
+  const bankAccIds = bankInvestmentAccounts.map((a) => a.id);
+  const allAccVals = bankAccIds.length > 0
+    ? await db
+        .select()
+        .from(accountValuationsTable)
+        .where(inArray(accountValuationsTable.accountId, bankAccIds))
+        .orderBy(desc(accountValuationsTable.date), desc(accountValuationsTable.id))
+    : [];
+  const latestAccValMap = new Map<number, number>();
+  for (const v of allAccVals) {
+    if (!latestAccValMap.has(v.accountId)) latestAccValMap.set(v.accountId, Number(v.value));
+  }
 
   // Build: assetId -> invested amount (from transactions)
   const investedMap = new Map<number, number>();
@@ -144,11 +160,48 @@ export async function getPortfolioMetrics(userId: number): Promise<PortfolioMetr
     };
   });
 
-  const totalInvested = rawMetrics.reduce((s, a) => s + a.investedAmount, 0);
-  const totalCurrentValue = rawMetrics.reduce((s, a) => s + a.currentValue, 0);
+  // Add bank investment accounts as virtual portfolio items.
+  // Use negative IDs to avoid collision with real asset IDs.
+  const bankRawMetrics = bankInvestmentAccounts.map((acc) => {
+    const investedAmount = Number(acc.balance);                                   // principal
+    const currentValue   = latestAccValMap.get(acc.id) ?? investedAmount;         // latest valuation or principal
+    const returnAmount   = currentValue - investedAmount;                         // interest earned
+    const returnPercent  = investedAmount > 0 ? (returnAmount / investedAmount) * 100 : 0;
+    return {
+      assetId: -acc.id,
+      assetName: acc.name,
+      category: "bank_investment",
+      subCategory: acc.type,
+      investedAmount,
+      currentValue,
+      returnAmount,
+      returnPercent,
+      targetPercent: 0,
+      currency: acc.currency ?? "LKR",
+      isActive: acc.isActive ?? true,
+    };
+  });
 
-  // Compute actualPercent now that totalCurrentValue is known
-  const assetMetrics: AssetMetrics[] = rawMetrics.map((a) => ({
+  const allRawMetrics = [...rawMetrics, ...bankRawMetrics];
+
+  if (allRawMetrics.length === 0) {
+    return {
+      assets: [],
+      totalInvested: 0,
+      totalCurrentValue: 0,
+      totalReturn: 0,
+      totalReturnPercent: 0,
+      cagr: null,
+      firstInvestmentDate: null,
+      categoryMetrics: [],
+    };
+  }
+
+  const totalInvested = allRawMetrics.reduce((s, a) => s + a.investedAmount, 0);
+  const totalCurrentValue = allRawMetrics.reduce((s, a) => s + a.currentValue, 0);
+
+  // Compute actualPercent now that totalCurrentValue is known (includes bank investments)
+  const assetMetrics: AssetMetrics[] = allRawMetrics.map((a) => ({
     ...a,
     actualPercent: totalCurrentValue > 0 ? (a.currentValue / totalCurrentValue) * 100 : 0,
   }));
@@ -256,10 +309,15 @@ export async function getSingleAssetMetrics(
 
 export async function getPortfolioTotalValue(userId: number): Promise<number> {
   const metrics = await getPortfolioMetrics(userId);
+  // Bank investment accounts are already counted inside metrics.totalCurrentValue;
+  // only add the *non-investment* account balances (savings, current, untagged) here
+  // to represent uninvested cash on top of the portfolio.
   const accounts = await db
     .select()
     .from(accountsTable)
     .where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)));
-  const cashValue = accounts.reduce((s, a) => s + Number(a.balance), 0);
+  const cashValue = accounts
+    .filter((a) => a.subCategory !== "investment")
+    .reduce((s, a) => s + Number(a.balance), 0);
   return metrics.totalCurrentValue + cashValue;
 }
