@@ -500,8 +500,18 @@ export const GetAccountsResponseItem = zod.object({
   id: zod.number(),
   name: zod.string(),
   type: zod.enum(["bank", "money_market", "cash"]),
+  subCategory: zod
+    .union([
+      zod.literal("savings"),
+      zod.literal("investment"),
+      zod.literal("current"),
+      zod.literal(null),
+    ])
+    .nullish(),
   tag: zod.enum(["emergency", "opportunity", "free"]),
   balance: zod.number(),
+  currentBalance: zod.number(),
+  interestEarned: zod.number(),
   currency: zod.string(),
   isActive: zod.boolean(),
   createdAt: zod.string(),
@@ -515,6 +525,14 @@ export const GetAccountsResponse = zod.array(GetAccountsResponseItem);
 export const CreateAccountBody = zod.object({
   name: zod.string(),
   type: zod.enum(["bank", "money_market", "cash"]),
+  subCategory: zod
+    .union([
+      zod.literal("savings"),
+      zod.literal("investment"),
+      zod.literal("current"),
+      zod.literal(null),
+    ])
+    .nullish(),
   tag: zod.enum(["emergency", "opportunity", "free"]),
   balance: zod.number(),
   currency: zod.string(),
@@ -530,6 +548,7 @@ export const UpdateAccountParams = zod.object({
 export const UpdateAccountBody = zod.object({
   name: zod.string().optional(),
   type: zod.string().optional(),
+  subCategory: zod.string().nullish(),
   tag: zod.string().optional(),
   balance: zod.number().optional(),
   isActive: zod.boolean().optional(),
@@ -539,8 +558,18 @@ export const UpdateAccountResponse = zod.object({
   id: zod.number(),
   name: zod.string(),
   type: zod.enum(["bank", "money_market", "cash"]),
+  subCategory: zod
+    .union([
+      zod.literal("savings"),
+      zod.literal("investment"),
+      zod.literal("current"),
+      zod.literal(null),
+    ])
+    .nullish(),
   tag: zod.enum(["emergency", "opportunity", "free"]),
   balance: zod.number(),
+  currentBalance: zod.number(),
+  interestEarned: zod.number(),
   currency: zod.string(),
   isActive: zod.boolean(),
   createdAt: zod.string(),
@@ -568,6 +597,73 @@ export const GetAccountsSummaryResponse = zod.object({
   freeCash: zod.number(),
   monthlyInflow: zod.number(),
   monthlyOutflow: zod.number(),
+});
+
+/**
+ * @summary Get valuation history for an account (interest snapshots)
+ */
+export const GetAccountValuationsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetAccountValuationsResponseItem = zod.object({
+  id: zod.number(),
+  accountId: zod.number(),
+  value: zod.number(),
+  date: zod.string(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+export const GetAccountValuationsResponse = zod.array(
+  GetAccountValuationsResponseItem,
+);
+
+/**
+ * @summary Add a balance snapshot (records interest received)
+ */
+export const AddAccountValuationParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AddAccountValuationBody = zod.object({
+  value: zod.number(),
+  date: zod.string(),
+  note: zod.string().nullish(),
+});
+
+/**
+ * @summary Update an account valuation
+ */
+export const UpdateAccountValuationParams = zod.object({
+  id: zod.coerce.number(),
+  valuationId: zod.coerce.number(),
+});
+
+export const UpdateAccountValuationBody = zod.object({
+  value: zod.number(),
+  date: zod.string(),
+  note: zod.string().nullish(),
+});
+
+export const UpdateAccountValuationResponse = zod.object({
+  id: zod.number(),
+  accountId: zod.number(),
+  value: zod.number(),
+  date: zod.string(),
+  note: zod.string().nullish(),
+  createdAt: zod.string(),
+});
+
+/**
+ * @summary Delete an account valuation
+ */
+export const DeleteAccountValuationParams = zod.object({
+  id: zod.coerce.number(),
+  valuationId: zod.coerce.number(),
+});
+
+export const DeleteAccountValuationResponse = zod.object({
+  message: zod.string(),
 });
 
 /**

@@ -18,7 +18,9 @@ import type {
 
 import type {
   Account,
+  AccountValuation,
   AccountsSummary,
+  AddAccountValuationBody,
   AddValuationBody,
   Alert,
   Asset,
@@ -2422,6 +2424,375 @@ export function useGetAccountsSummary<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Get valuation history for an account (interest snapshots)
+ */
+export const getGetAccountValuationsUrl = (id: number) => {
+  return `/api/accounts/${id}/valuations`;
+};
+
+export const getAccountValuations = async (
+  id: number,
+  options?: RequestInit,
+): Promise<AccountValuation[]> => {
+  return customFetch<AccountValuation[]>(getGetAccountValuationsUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAccountValuationsQueryKey = (id: number) => {
+  return [`/api/accounts/${id}/valuations`] as const;
+};
+
+export const getGetAccountValuationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAccountValuations>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAccountValuations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAccountValuationsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAccountValuations>>
+  > = ({ signal }) => getAccountValuations(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAccountValuations>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAccountValuationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAccountValuations>>
+>;
+export type GetAccountValuationsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get valuation history for an account (interest snapshots)
+ */
+
+export function useGetAccountValuations<
+  TData = Awaited<ReturnType<typeof getAccountValuations>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAccountValuations>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAccountValuationsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a balance snapshot (records interest received)
+ */
+export const getAddAccountValuationUrl = (id: number) => {
+  return `/api/accounts/${id}/valuations`;
+};
+
+export const addAccountValuation = async (
+  id: number,
+  addAccountValuationBody: AddAccountValuationBody,
+  options?: RequestInit,
+): Promise<AccountValuation> => {
+  return customFetch<AccountValuation>(getAddAccountValuationUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(addAccountValuationBody),
+  });
+};
+
+export const getAddAccountValuationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addAccountValuation>>,
+    TError,
+    { id: number; data: BodyType<AddAccountValuationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addAccountValuation>>,
+  TError,
+  { id: number; data: BodyType<AddAccountValuationBody> },
+  TContext
+> => {
+  const mutationKey = ["addAccountValuation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addAccountValuation>>,
+    { id: number; data: BodyType<AddAccountValuationBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return addAccountValuation(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddAccountValuationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof addAccountValuation>>
+>;
+export type AddAccountValuationMutationBody = BodyType<AddAccountValuationBody>;
+export type AddAccountValuationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a balance snapshot (records interest received)
+ */
+export const useAddAccountValuation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addAccountValuation>>,
+    TError,
+    { id: number; data: BodyType<AddAccountValuationBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof addAccountValuation>>,
+  TError,
+  { id: number; data: BodyType<AddAccountValuationBody> },
+  TContext
+> => {
+  return useMutation(getAddAccountValuationMutationOptions(options));
+};
+
+/**
+ * @summary Update an account valuation
+ */
+export const getUpdateAccountValuationUrl = (
+  id: number,
+  valuationId: number,
+) => {
+  return `/api/accounts/${id}/valuations/${valuationId}`;
+};
+
+export const updateAccountValuation = async (
+  id: number,
+  valuationId: number,
+  addAccountValuationBody: AddAccountValuationBody,
+  options?: RequestInit,
+): Promise<AccountValuation> => {
+  return customFetch<AccountValuation>(
+    getUpdateAccountValuationUrl(id, valuationId),
+    {
+      ...options,
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(addAccountValuationBody),
+    },
+  );
+};
+
+export const getUpdateAccountValuationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAccountValuation>>,
+    TError,
+    {
+      id: number;
+      valuationId: number;
+      data: BodyType<AddAccountValuationBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateAccountValuation>>,
+  TError,
+  { id: number; valuationId: number; data: BodyType<AddAccountValuationBody> },
+  TContext
+> => {
+  const mutationKey = ["updateAccountValuation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateAccountValuation>>,
+    { id: number; valuationId: number; data: BodyType<AddAccountValuationBody> }
+  > = (props) => {
+    const { id, valuationId, data } = props ?? {};
+
+    return updateAccountValuation(id, valuationId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateAccountValuationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateAccountValuation>>
+>;
+export type UpdateAccountValuationMutationBody =
+  BodyType<AddAccountValuationBody>;
+export type UpdateAccountValuationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update an account valuation
+ */
+export const useUpdateAccountValuation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateAccountValuation>>,
+    TError,
+    {
+      id: number;
+      valuationId: number;
+      data: BodyType<AddAccountValuationBody>;
+    },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateAccountValuation>>,
+  TError,
+  { id: number; valuationId: number; data: BodyType<AddAccountValuationBody> },
+  TContext
+> => {
+  return useMutation(getUpdateAccountValuationMutationOptions(options));
+};
+
+/**
+ * @summary Delete an account valuation
+ */
+export const getDeleteAccountValuationUrl = (
+  id: number,
+  valuationId: number,
+) => {
+  return `/api/accounts/${id}/valuations/${valuationId}`;
+};
+
+export const deleteAccountValuation = async (
+  id: number,
+  valuationId: number,
+  options?: RequestInit,
+): Promise<MessageResponse> => {
+  return customFetch<MessageResponse>(
+    getDeleteAccountValuationUrl(id, valuationId),
+    {
+      ...options,
+      method: "DELETE",
+    },
+  );
+};
+
+export const getDeleteAccountValuationMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAccountValuation>>,
+    TError,
+    { id: number; valuationId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteAccountValuation>>,
+  TError,
+  { id: number; valuationId: number },
+  TContext
+> => {
+  const mutationKey = ["deleteAccountValuation"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteAccountValuation>>,
+    { id: number; valuationId: number }
+  > = (props) => {
+    const { id, valuationId } = props ?? {};
+
+    return deleteAccountValuation(id, valuationId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAccountValuationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteAccountValuation>>
+>;
+
+export type DeleteAccountValuationMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete an account valuation
+ */
+export const useDeleteAccountValuation = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteAccountValuation>>,
+    TError,
+    { id: number; valuationId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteAccountValuation>>,
+  TError,
+  { id: number; valuationId: number },
+  TContext
+> => {
+  return useMutation(getDeleteAccountValuationMutationOptions(options));
+};
 
 /**
  * @summary Get SIP configuration

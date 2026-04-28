@@ -303,6 +303,19 @@ export const AccountType = {
   cash: "cash",
 } as const;
 
+/**
+ * @nullable
+ */
+export type AccountSubCategory =
+  | (typeof AccountSubCategory)[keyof typeof AccountSubCategory]
+  | null;
+
+export const AccountSubCategory = {
+  savings: "savings",
+  investment: "investment",
+  current: "current",
+} as const;
+
 export type AccountTag = (typeof AccountTag)[keyof typeof AccountTag];
 
 export const AccountTag = {
@@ -315,8 +328,12 @@ export interface Account {
   id: number;
   name: string;
   type: AccountType;
+  /** @nullable */
+  subCategory?: AccountSubCategory;
   tag: AccountTag;
   balance: number;
+  currentBalance: number;
+  interestEarned: number;
   currency: string;
   isActive: boolean;
   createdAt: string;
@@ -332,6 +349,19 @@ export const CreateAccountBodyType = {
   cash: "cash",
 } as const;
 
+/**
+ * @nullable
+ */
+export type CreateAccountBodySubCategory =
+  | (typeof CreateAccountBodySubCategory)[keyof typeof CreateAccountBodySubCategory]
+  | null;
+
+export const CreateAccountBodySubCategory = {
+  savings: "savings",
+  investment: "investment",
+  current: "current",
+} as const;
+
 export type CreateAccountBodyTag =
   (typeof CreateAccountBodyTag)[keyof typeof CreateAccountBodyTag];
 
@@ -344,6 +374,8 @@ export const CreateAccountBodyTag = {
 export interface CreateAccountBody {
   name: string;
   type: CreateAccountBodyType;
+  /** @nullable */
+  subCategory?: CreateAccountBodySubCategory;
   tag: CreateAccountBodyTag;
   balance: number;
   currency: string;
@@ -352,9 +384,28 @@ export interface CreateAccountBody {
 export interface UpdateAccountBody {
   name?: string;
   type?: string;
+  /** @nullable */
+  subCategory?: string | null;
   tag?: string;
   balance?: number;
   isActive?: boolean;
+}
+
+export interface AccountValuation {
+  id: number;
+  accountId: number;
+  value: number;
+  date: string;
+  /** @nullable */
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface AddAccountValuationBody {
+  value: number;
+  date: string;
+  /** @nullable */
+  note?: string | null;
 }
 
 export interface AccountsSummary {

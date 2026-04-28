@@ -3,6 +3,7 @@ export * from "./password_resets";
 export * from "./assets";
 export * from "./valuations";
 export * from "./accounts";
+export * from "./account_valuations";
 export * from "./transactions";
 export * from "./sip_configs";
 export * from "./sip_history";
