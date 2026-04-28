@@ -26,13 +26,17 @@ export async function getLatestAccountValuationsMap(
 
 /**
  * Effective balance for an account = latest valuation value if present,
- * otherwise the principal (account.balance).
+ * otherwise the principal snapshot (account.principal).
+ *
+ * We deliberately fall back to `principal` rather than `balance` because
+ * `balance` is a transaction ledger that can drift negative when the user
+ * records an `invest` outflow they haven't yet matched with a deposit.
  */
 export function effectiveAccountBalance(
   account: AccountRow,
   latestValuation?: ValuationRow | null,
 ): number {
-  return latestValuation ? Number(latestValuation.value) : Number(account.balance);
+  return latestValuation ? Number(latestValuation.value) : Number(account.principal);
 }
 
 /**

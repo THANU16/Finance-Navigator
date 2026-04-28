@@ -15,7 +15,7 @@ type AccountRow = typeof accountsTable.$inferSelect;
 type ValuationRow = typeof accountValuationsTable.$inferSelect;
 
 function formatAccount(a: AccountRow, latestVal?: ValuationRow | null) {
-  const principal = Number(a.balance);
+  const principal = Number(a.principal);
   const currentBalance = latestVal ? Number(latestVal.value) : principal;
   const interestEarned = latestVal ? currentBalance - principal : 0;
   return {
@@ -84,6 +84,9 @@ router.post("/", async (req, res): Promise<void> => {
     userId, name, type,
     subCategory: subCategory ?? null,
     tag,
+    // On create, principal and balance both start at the entered amount.
+    // Transactions later mutate `balance` (ledger) but not `principal` (snapshot).
+    principal: balance.toString(),
     balance: balance.toString(),
     currency: currency || "LKR",
   }).returning();
@@ -104,7 +107,13 @@ router.patch("/:id", async (req, res): Promise<void> => {
   if (parsed.data.type        !== undefined) updates.type        = parsed.data.type;
   if (parsed.data.subCategory !== undefined) updates.subCategory = parsed.data.subCategory;
   if (parsed.data.tag         !== undefined) updates.tag         = parsed.data.tag;
-  if (parsed.data.balance     !== undefined) updates.balance     = parsed.data.balance.toString();
+  if (parsed.data.balance     !== undefined) {
+    // Editing the principal via the account form updates BOTH principal (the
+    // snapshot used for interest calc) and balance (the ledger). This lets
+    // users correct an account whose ledger has drifted from real-world value.
+    updates.principal = parsed.data.balance.toString();
+    updates.balance   = parsed.data.balance.toString();
+  }
   if (parsed.data.isActive    !== undefined) updates.isActive    = parsed.data.isActive;
 
   const [acc] = await db.update(accountsTable).set(updates).where(and(eq(accountsTable.id, id), eq(accountsTable.userId, userId))).returning();
