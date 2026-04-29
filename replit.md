@@ -64,6 +64,16 @@ A professional full-stack financial portfolio management application built for S
 - `settings` — Per-user configurable settings
 - `deployments` — Market crash deployment history
 
+## Replit Environment Setup
+
+- **Frontend port**: 5000 (required for Replit webview preview)
+- **Backend port**: 8080
+- **Vite proxy**: `/api` requests proxied from port 5000 to port 8080
+- **Database**: Replit PostgreSQL (DATABASE_URL provided as secret)
+- **Session secret**: SESSION_SECRET stored in Replit secrets
+- **Workflow**: `Start application` — runs both frontend and backend in parallel
+- **Schema migrations**: `pnpm --filter @workspace/db run push`
+
 ## Test Account
 
 - Email: test@pims.lk
