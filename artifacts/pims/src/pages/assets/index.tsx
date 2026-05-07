@@ -144,16 +144,22 @@ export default function AssetAnalysisList() {
                               <p className="text-sm font-medium">{formatCurrency(asset.investedValue, asset.currency)}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">P&amp;L</p>
+                              <p className="text-xs text-muted-foreground mb-0.5">Abs Return</p>
                               <p className={`text-sm font-semibold flex items-center gap-1 ${isPositive ? "text-green-500" : "text-red-500"}`}>
                                 {isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                {isPositive ? "+" : ""}{formatCurrency(pl, asset.currency)}
+                                {isPositive ? "+" : ""}{formatPercent(plPct)}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-muted-foreground mb-0.5">Return</p>
-                              <p className={`text-sm font-semibold ${isPositive ? "text-green-500" : "text-red-500"}`}>
-                                {isPositive ? "+" : ""}{formatPercent(plPct)}
+                              <p className="text-xs text-muted-foreground mb-0.5">CAGR</p>
+                              <p className={`text-sm font-semibold ${asset.cagr != null ? (asset.cagr >= 0 ? "text-green-500" : "text-red-500") : "text-muted-foreground"}`}>
+                                {asset.cagr != null ? `${asset.cagr >= 0 ? "+" : ""}${formatPercent(asset.cagr)}` : "N/A"}
+                              </p>
+                            </div>
+                            <div className="col-span-2 pt-1 border-t border-border/40">
+                              <p className="text-xs text-muted-foreground mb-0.5">XIRR <span className="font-normal">(annualised IRR)</span></p>
+                              <p className={`text-sm font-semibold ${asset.xirr != null ? (asset.xirr >= 0 ? "text-green-500" : "text-red-500") : "text-muted-foreground"}`}>
+                                {asset.xirr != null ? `${asset.xirr >= 0 ? "+" : ""}${formatPercent(asset.xirr)}` : "N/A"}
                               </p>
                             </div>
                           </div>

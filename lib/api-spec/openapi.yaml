@@ -1026,6 +1026,14 @@ components:
           type: number
         profitLossPercent:
           type: number
+        absoluteReturn:
+          type: number
+        absoluteReturnPercent:
+          type: number
+        cagr:
+          type: ["number", "null"]
+        xirr:
+          type: ["number", "null"]
         targetPercent:
           type: number
         actualPercent:
@@ -1046,6 +1054,8 @@ components:
         - investedValue
         - profitLoss
         - profitLossPercent
+        - absoluteReturn
+        - absoluteReturnPercent
         - targetPercent
         - actualPercent
         - currency
@@ -1078,6 +1088,14 @@ components:
           type: number
         profitLossPercent:
           type: number
+        absoluteReturn:
+          type: number
+        absoluteReturnPercent:
+          type: number
+        cagr:
+          type: ["number", "null"]
+        xirr:
+          type: ["number", "null"]
         targetPercent:
           type: number
         actualPercent:
@@ -1106,6 +1124,8 @@ components:
         - investedValue
         - profitLoss
         - profitLossPercent
+        - absoluteReturn
+        - absoluteReturnPercent
         - targetPercent
         - actualPercent
         - currency
@@ -1576,6 +1596,8 @@ components:
         totalReturnPercent:
           type: number
         cagr:
+          type: ["number", "null"]
+        xirr:
           type: ["number", "null"]
         categoryPerformance:
           type: array

@@ -44,7 +44,7 @@ export default function Performance() {
         </Tabs>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Return</CardTitle>
@@ -55,7 +55,7 @@ export default function Performance() {
               {analytics.totalReturn >= 0 ? "+" : ""}{formatCurrency(analytics.totalReturn)}
             </div>
             <p className={`text-xs mt-1 ${analytics.totalReturnPercent >= 0 ? "text-green-500" : "text-red-500"}`}>
-              {formatPercent(analytics.totalReturnPercent)} for selected period
+              {analytics.totalReturnPercent >= 0 ? "+" : ""}{formatPercent(analytics.totalReturnPercent)} absolute
             </p>
           </CardContent>
         </Card>
@@ -65,11 +65,25 @@ export default function Performance() {
             <Info className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold" data-testid="text-cagr">
-              {analytics.cagr !== null && analytics.cagr !== undefined ? formatPercent(analytics.cagr) : "N/A"}
+            <div className={`text-2xl font-bold ${analytics.cagr != null ? (analytics.cagr >= 0 ? "text-green-500" : "text-red-500") : ""}`} data-testid="text-cagr">
+              {analytics.cagr != null ? `${analytics.cagr >= 0 ? "+" : ""}${formatPercent(analytics.cagr)}` : "N/A"}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Compound Annual Growth Rate
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">XIRR</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${analytics.xirr != null ? (analytics.xirr >= 0 ? "text-green-500" : "text-red-500") : ""}`}>
+              {analytics.xirr != null ? `${analytics.xirr >= 0 ? "+" : ""}${formatPercent(analytics.xirr)}` : "N/A"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Annualised IRR (cashflow-weighted)
             </p>
           </CardContent>
         </Card>

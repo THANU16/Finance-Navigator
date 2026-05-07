@@ -122,7 +122,7 @@ export default function AssetDetail() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Current Value</CardTitle>
@@ -136,7 +136,7 @@ export default function AssetDetail() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Return</CardTitle>
+            <CardTitle className="text-sm font-medium">Absolute Return</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -145,8 +145,52 @@ export default function AssetDetail() {
               {formatCurrency(Math.abs(profitLoss), asset.currency)}
             </div>
             <p className={`text-xs mt-1 ${profitLoss >= 0 ? "text-green-500" : "text-red-500"}`}>
-              {formatPercent(profitLossPercent)} all time
+              {profitLoss >= 0 ? "+" : ""}{formatPercent(profitLossPercent)} total gain
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">CAGR</CardTitle>
+            <Percent className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {asset.cagr != null ? (
+              <>
+                <div className={`text-2xl font-bold ${asset.cagr >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {asset.cagr >= 0 ? "+" : ""}{formatPercent(asset.cagr)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Compound Annual Growth Rate</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-muted-foreground">N/A</div>
+                <p className="text-xs text-muted-foreground mt-1">Needs &gt;3 months of data</p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">XIRR</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {asset.xirr != null ? (
+              <>
+                <div className={`text-2xl font-bold ${asset.xirr >= 0 ? "text-green-500" : "text-red-500"}`}>
+                  {asset.xirr >= 0 ? "+" : ""}{formatPercent(asset.xirr)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">Annualised IRR on cashflows</p>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-muted-foreground">N/A</div>
+                <p className="text-xs text-muted-foreground mt-1">Needs invest &amp; valuation data</p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -156,8 +200,8 @@ export default function AssetDetail() {
             <Percent className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{Number(asset.actualPercent).toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground mt-1">Target: {asset.targetPercent}%</p>
+            <div className="text-2xl font-bold">{Number(asset.actualPercent).toFixed(2)}%</div>
+            <p className="text-xs text-muted-foreground mt-1">Target: {Number(asset.targetPercent).toFixed(2)}%</p>
           </CardContent>
         </Card>
 

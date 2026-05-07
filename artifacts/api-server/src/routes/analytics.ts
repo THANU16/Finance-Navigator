@@ -28,6 +28,7 @@ router.get("/performance", async (req, res): Promise<void> => {
     totalReturn: portfolio.totalReturn,
     totalReturnPercent: portfolio.totalReturnPercent,
     cagr: portfolio.cagr,
+    xirr: portfolio.xirr,
     categoryPerformance: portfolio.categoryMetrics.map((c) => ({
       category: c.category,
       invested: c.investedAmount,

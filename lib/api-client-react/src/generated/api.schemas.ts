@@ -115,6 +115,12 @@ export interface Asset {
   pricePerUnit?: number | null;
   profitLoss: number;
   profitLossPercent: number;
+  absoluteReturn: number;
+  absoluteReturnPercent: number;
+  /** @nullable */
+  cagr?: number | null;
+  /** @nullable */
+  xirr?: number | null;
   targetPercent: number;
   actualPercent: number;
   currency: string;
@@ -188,6 +194,12 @@ export interface AssetDetail {
   pricePerUnit?: number | null;
   profitLoss: number;
   profitLossPercent: number;
+  absoluteReturn: number;
+  absoluteReturnPercent: number;
+  /** @nullable */
+  cagr?: number | null;
+  /** @nullable */
+  xirr?: number | null;
   targetPercent: number;
   actualPercent: number;
   currency: string;
@@ -454,6 +466,8 @@ export interface PerformanceAnalytics {
   totalReturnPercent: number;
   /** @nullable */
   cagr?: number | null;
+  /** @nullable */
+  xirr?: number | null;
   categoryPerformance: CategoryPerformance[];
   drawdown: number;
   sipTotalInvested: number;
