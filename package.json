@@ -1,16 +1,16 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
-  },
-  "private": true,
-  "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1"
-  }
+    "name": "workspace",
+    "version": "0.0.0",
+    "license": "MIT",
+    "scripts": {
+        "build": "pnpm run typecheck \u0026\u0026 pnpm -r --if-present run build",
+        "typecheck:libs": "tsc --build",
+        "typecheck": "pnpm run typecheck:libs \u0026\u0026 pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+        "preinstall": "node -e \"const fs=require('fs'); for (const f of ['package-lock.json','yarn.lock']) { try { fs.unlinkSync(f); } catch {} } const ua=process.env.npm_config_user_agent||''; const execPath=(process.env.npm_execpath||'').toLowerCase(); const lifecycle=(process.env.npm_lifecycle_script||'').toLowerCase(); const isPnpm = ua.includes('pnpm') || execPath.includes('pnpm') || lifecycle.includes('pnpm'); if (!isPnpm) { console.error('Please use pnpm'); process.exit(1); }\""
+    },
+    "private": true,
+    "devDependencies": {
+        "typescript": "~5.9.2",
+        "prettier": "^3.8.1"
+    }
 }
