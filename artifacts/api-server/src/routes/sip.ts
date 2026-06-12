@@ -2,7 +2,10 @@ import { Router } from "express";
 import { db, sipConfigsTable, sipHistoryTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { UpdateSipConfigBody, RecordSipExecutionBody } from "@workspace/api-zod";
+import {
+  UpdateSipConfigBody,
+  RecordSipExecutionBody,
+} from "@workspace/api-zod";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,9 +25,16 @@ function formatConfig(c: typeof sipConfigsTable.$inferSelect) {
 
 router.get("/", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  let [config] = await db.select().from(sipConfigsTable).where(eq(sipConfigsTable.userId, userId)).limit(1);
+  let [config] = await db
+    .select()
+    .from(sipConfigsTable)
+    .where(eq(sipConfigsTable.userId, userId))
+    .limit(1);
   if (!config) {
-    const [newConfig] = await db.insert(sipConfigsTable).values({ userId }).returning();
+    const [newConfig] = await db
+      .insert(sipConfigsTable)
+      .values({ userId })
+      .returning();
     config = newConfig;
   }
   res.json(formatConfig(config));
@@ -38,34 +48,77 @@ router.put("/", async (req, res): Promise<void> => {
     return;
   }
 
-  const { monthlyAmount, equityPercent, debtPercent, metalsPercent, opportunityPercent, assetAllocations } = parsed.data;
-  const total = equityPercent + debtPercent + metalsPercent + opportunityPercent;
+  const {
+    monthlyAmount,
+    equityPercent,
+    debtPercent,
+    metalsPercent,
+    opportunityPercent,
+    assetAllocations,
+  } = parsed.data;
+  const total =
+    equityPercent + debtPercent + metalsPercent + opportunityPercent;
   if (Math.abs(total - 100) > 0.01) {
     res.status(400).json({ error: "Category percentages must sum to 100" });
     return;
   }
 
-  let [config] = await db.select().from(sipConfigsTable).where(eq(sipConfigsTable.userId, userId)).limit(1);
+  const categoryTargets = {
+    equity_fund: equityPercent,
+    debt_fund: debtPercent,
+    metal: metalsPercent,
+  } as const;
+
+  for (const category of ["equity_fund", "debt_fund", "metal"] as const) {
+    const categoryAllocs = assetAllocations.filter(
+      (a) => a.category === category,
+    );
+    if (categoryAllocs.length === 0) continue;
+
+    const allocTotal = categoryAllocs.reduce(
+      (sum, a) => sum + Number(a.percent || 0),
+      0,
+    );
+    if (Math.abs(allocTotal - categoryTargets[category]) > 0.01) {
+      res.status(400).json({
+        error: `Asset allocations for ${category} must sum to ${categoryTargets[category]}%`,
+      });
+      return;
+    }
+  }
+
+  let [config] = await db
+    .select()
+    .from(sipConfigsTable)
+    .where(eq(sipConfigsTable.userId, userId))
+    .limit(1);
   if (!config) {
-    const [newConfig] = await db.insert(sipConfigsTable).values({
-      userId,
-      monthlyAmount: monthlyAmount.toString(),
-      equityPercent: equityPercent.toString(),
-      debtPercent: debtPercent.toString(),
-      metalsPercent: metalsPercent.toString(),
-      opportunityPercent: opportunityPercent.toString(),
-      assetAllocations: assetAllocations as unknown as string,
-    }).returning();
+    const [newConfig] = await db
+      .insert(sipConfigsTable)
+      .values({
+        userId,
+        monthlyAmount: monthlyAmount.toString(),
+        equityPercent: equityPercent.toString(),
+        debtPercent: debtPercent.toString(),
+        metalsPercent: metalsPercent.toString(),
+        opportunityPercent: opportunityPercent.toString(),
+        assetAllocations: assetAllocations as unknown as string,
+      })
+      .returning();
     config = newConfig;
   } else {
-    const [updated] = await db.update(sipConfigsTable).set({
-      monthlyAmount: monthlyAmount.toString(),
-      equityPercent: equityPercent.toString(),
-      debtPercent: debtPercent.toString(),
-      metalsPercent: metalsPercent.toString(),
-      opportunityPercent: opportunityPercent.toString(),
-      assetAllocations: assetAllocations as unknown as string,
-    }).where(eq(sipConfigsTable.userId, userId)).returning();
+    const [updated] = await db
+      .update(sipConfigsTable)
+      .set({
+        monthlyAmount: monthlyAmount.toString(),
+        equityPercent: equityPercent.toString(),
+        debtPercent: debtPercent.toString(),
+        metalsPercent: metalsPercent.toString(),
+        opportunityPercent: opportunityPercent.toString(),
+        assetAllocations: assetAllocations as unknown as string,
+      })
+      .where(eq(sipConfigsTable.userId, userId))
+      .returning();
     config = updated;
   }
 
@@ -74,12 +127,20 @@ router.put("/", async (req, res): Promise<void> => {
 
 router.get("/history", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  const history = await db.select().from(sipHistoryTable).where(eq(sipHistoryTable.userId, userId)).orderBy(desc(sipHistoryTable.month));
-  res.json(history.map(h => ({
-    id: h.id, month: h.month, totalAmount: Number(h.totalAmount),
-    breakdown: (h.breakdown as unknown[]) || [],
-    executedAt: h.executedAt.toISOString(),
-  })));
+  const history = await db
+    .select()
+    .from(sipHistoryTable)
+    .where(eq(sipHistoryTable.userId, userId))
+    .orderBy(desc(sipHistoryTable.month));
+  res.json(
+    history.map((h) => ({
+      id: h.id,
+      month: h.month,
+      totalAmount: Number(h.totalAmount),
+      breakdown: (h.breakdown as unknown[]) || [],
+      executedAt: h.executedAt.toISOString(),
+    })),
+  );
 });
 
 router.post("/history", async (req, res): Promise<void> => {
@@ -96,7 +157,9 @@ router.post("/history", async (req, res): Promise<void> => {
   const [existing] = await db
     .select()
     .from(sipHistoryTable)
-    .where(and(eq(sipHistoryTable.userId, userId), eq(sipHistoryTable.month, month)))
+    .where(
+      and(eq(sipHistoryTable.userId, userId), eq(sipHistoryTable.month, month)),
+    )
     .limit(1);
 
   if (existing) {
@@ -107,12 +170,15 @@ router.post("/history", async (req, res): Promise<void> => {
     return;
   }
 
-  const [entry] = await db.insert(sipHistoryTable).values({
-    userId,
-    month,
-    totalAmount: totalAmount.toString(),
-    breakdown: breakdown as unknown as string,
-  }).returning();
+  const [entry] = await db
+    .insert(sipHistoryTable)
+    .values({
+      userId,
+      month,
+      totalAmount: totalAmount.toString(),
+      breakdown: breakdown as unknown as string,
+    })
+    .returning();
 
   res.status(201).json({
     id: entry.id,
