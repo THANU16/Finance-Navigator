@@ -918,7 +918,15 @@ components:
         totalValue:
           type: number
         investedValue:
-          type: number
+          type: object
+          properties:
+            assets:
+              type: number
+            cash:
+              type: number
+            required:
+              - assets
+              - cash
         profitLoss:
           type: number
         profitLossPercent:
@@ -1237,7 +1245,8 @@ components:
           type: integer
         type:
           type: string
-          enum: [deposit, withdrawal, transfer, invest, redeem, tag_allocation, sip]
+          enum:
+            [deposit, withdrawal, transfer, invest, redeem, tag_allocation, sip]
         amount:
           type: number
         assetId:
@@ -1268,7 +1277,8 @@ components:
       properties:
         type:
           type: string
-          enum: [deposit, withdrawal, transfer, invest, redeem, tag_allocation, sip]
+          enum:
+            [deposit, withdrawal, transfer, invest, redeem, tag_allocation, sip]
         amount:
           type: number
         assetId:

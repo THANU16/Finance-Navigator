@@ -59,7 +59,10 @@ export interface CategoryAllocation {
 
 export interface DashboardSummary {
   totalValue: number;
-  investedValue: number;
+  investedValue: {
+    assets: number;
+    cash: number;
+  };
   profitLoss: number;
   profitLossPercent: number;
   monthlyReturn: number;

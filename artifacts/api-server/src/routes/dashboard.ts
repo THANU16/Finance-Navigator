@@ -19,8 +19,17 @@ router.get("/summary", async (req, res): Promise<void> => {
 
   const [portfolio, accounts, settingsRows] = await Promise.all([
     getPortfolioMetrics(userId),
-    db.select().from(accountsTable).where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true))),
-    db.select().from(settingsTable).where(eq(settingsTable.userId, userId)).limit(1),
+    db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)),
+      ),
+    db
+      .select()
+      .from(settingsTable)
+      .where(eq(settingsTable.userId, userId))
+      .limit(1),
   ]);
 
   const settings = settingsRows[0];
@@ -28,9 +37,17 @@ router.get("/summary", async (req, res): Promise<void> => {
   const totalValue = portfolio.totalCurrentValue + totalCashValue;
 
   // Allocation by category — uses accurate currentValue from portfolio service
-  const catValueMap = new Map(portfolio.categoryMetrics.map((c) => [c.category, c.currentValue]));
-  const allocationByCategory = ["Equity Funds", "Debt Funds", "Precious Metals", "Cash"].map((catName) => {
-    const value = catName === "Cash" ? totalCashValue : (catValueMap.get(catName) ?? 0);
+  const catValueMap = new Map(
+    portfolio.categoryMetrics.map((c) => [c.category, c.currentValue]),
+  );
+  const allocationByCategory = [
+    "Equity Funds",
+    "Debt Funds",
+    "Precious Metals",
+    "Cash",
+  ].map((catName) => {
+    const value =
+      catName === "Cash" ? totalCashValue : (catValueMap.get(catName) ?? 0);
     return {
       category: catName,
       value,
@@ -40,23 +57,45 @@ router.get("/summary", async (req, res): Promise<void> => {
   });
 
   // Emergency fund
-  const emergencyFundRequired = settings ? Number(settings.emergencyFundRequired) : 0;
-  const emergencyFundCurrent = accounts.filter((a) => a.tag === "emergency").reduce((s, a) => s + Number(a.balance), 0);
-  const emergencyFundPercent = emergencyFundRequired > 0 ? (emergencyFundCurrent / emergencyFundRequired) * 100 : 0;
-  const cashAvailable = accounts.filter((a) => a.tag === "free").reduce((s, a) => s + Number(a.balance), 0);
+  const emergencyFundRequired = settings
+    ? Number(settings.emergencyFundRequired)
+    : 0;
+  const emergencyFundCurrent = accounts
+    .filter((a) => a.tag === "emergency")
+    .reduce((s, a) => s + Number(a.balance), 0);
+  const emergencyFundPercent =
+    emergencyFundRequired > 0
+      ? (emergencyFundCurrent / emergencyFundRequired) * 100
+      : 0;
+  const cashAvailable = accounts
+    .filter((a) => a.tag === "free")
+    .reduce((s, a) => s + Number(a.balance), 0);
 
   // Best/worst category by return %
-  const sortedCats = [...portfolio.categoryMetrics].sort((a, b) => b.returnPercent - a.returnPercent);
+  const sortedCats = [...portfolio.categoryMetrics].sort(
+    (a, b) => b.returnPercent - a.returnPercent,
+  );
   const bestCategory = sortedCats[0]?.category ?? "N/A";
   const worstCategory = sortedCats[sortedCats.length - 1]?.category ?? "N/A";
 
   // Risk = max category concentration
-  const maxCategoryPercent = Math.max(...allocationByCategory.map((c) => c.percent), 0);
-  const riskLevel = maxCategoryPercent > 70 ? "High" : maxCategoryPercent > 50 ? "Medium" : "Low";
+  const maxCategoryPercent = Math.max(
+    ...allocationByCategory.map((c) => c.percent),
+    0,
+  );
+  const riskLevel =
+    maxCategoryPercent > 70
+      ? "High"
+      : maxCategoryPercent > 50
+        ? "Medium"
+        : "Low";
 
   res.json({
     totalValue,
-    investedValue: portfolio.totalInvested,
+    investedValue: {
+      assets: portfolio.totalInvested,
+      cash: totalCashValue,
+    },
     profitLoss: portfolio.totalReturn,
     profitLossPercent: portfolio.totalReturnPercent,
     monthlyReturn: portfolio.totalReturn,
@@ -74,44 +113,93 @@ router.get("/summary", async (req, res): Promise<void> => {
 
 router.get("/alerts", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
-  const alerts: Array<{ id: number; type: string; message: string; severity: string; createdAt: string }> = [];
+  const alerts: Array<{
+    id: number;
+    type: string;
+    message: string;
+    severity: string;
+    createdAt: string;
+  }> = [];
   let alertId = 1;
   const now = new Date().toISOString();
 
   const [portfolio, settingsRows, accounts] = await Promise.all([
     getPortfolioMetrics(userId),
-    db.select().from(settingsTable).where(eq(settingsTable.userId, userId)).limit(1),
-    db.select().from(accountsTable).where(and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true))),
+    db
+      .select()
+      .from(settingsTable)
+      .where(eq(settingsTable.userId, userId))
+      .limit(1),
+    db
+      .select()
+      .from(accountsTable)
+      .where(
+        and(eq(accountsTable.userId, userId), eq(accountsTable.isActive, true)),
+      ),
   ]);
 
   const settings = settingsRows[0];
   if (settings) {
     const emergencyRequired = Number(settings.emergencyFundRequired);
-    const emergencyCurrent = accounts.filter((a) => a.tag === "emergency").reduce((acc, a) => acc + Number(a.balance), 0);
-    const pct = emergencyRequired > 0 ? (emergencyCurrent / emergencyRequired) * 100 : 100;
+    const emergencyCurrent = accounts
+      .filter((a) => a.tag === "emergency")
+      .reduce((acc, a) => acc + Number(a.balance), 0);
+    const pct =
+      emergencyRequired > 0
+        ? (emergencyCurrent / emergencyRequired) * 100
+        : 100;
     const criticalThreshold = Number(settings.emergencyFundCriticalThreshold);
     const lowThreshold = Number(settings.emergencyFundLowThreshold);
 
     if (pct < criticalThreshold) {
-      alerts.push({ id: alertId++, type: "emergency_fund", message: `Emergency fund critically low (${pct.toFixed(0)}% of required)`, severity: "critical", createdAt: now });
+      alerts.push({
+        id: alertId++,
+        type: "emergency_fund",
+        message: `Emergency fund critically low (${pct.toFixed(0)}% of required)`,
+        severity: "critical",
+        createdAt: now,
+      });
     } else if (pct < lowThreshold) {
-      alerts.push({ id: alertId++, type: "emergency_fund", message: `Emergency fund below target (${pct.toFixed(0)}% of required)`, severity: "warning", createdAt: now });
+      alerts.push({
+        id: alertId++,
+        type: "emergency_fund",
+        message: `Emergency fund below target (${pct.toFixed(0)}% of required)`,
+        severity: "warning",
+        createdAt: now,
+      });
     }
 
     // Drift check using accurate currentValue from portfolio service
     const tolerance = Number(settings.rebalancingDriftTolerance);
     const driftingAssets = portfolio.assets.filter((a) => {
-      const actualPct = portfolio.totalCurrentValue > 0 ? (a.currentValue / portfolio.totalCurrentValue) * 100 : 0;
+      const actualPct =
+        portfolio.totalCurrentValue > 0
+          ? (a.currentValue / portfolio.totalCurrentValue) * 100
+          : 0;
       return Math.abs(actualPct - a.targetPercent) > tolerance;
     });
     if (driftingAssets.length > 0) {
-      alerts.push({ id: alertId++, type: "rebalancing", message: `Portfolio drift detected in ${driftingAssets.length} asset(s) — rebalancing recommended`, severity: "warning", createdAt: now });
+      alerts.push({
+        id: alertId++,
+        type: "rebalancing",
+        message: `Portfolio drift detected in ${driftingAssets.length} asset(s) — rebalancing recommended`,
+        severity: "warning",
+        createdAt: now,
+      });
     }
   }
 
-  const freeCash = accounts.filter((a) => a.tag === "free").reduce((s, a) => s + Number(a.balance), 0);
+  const freeCash = accounts
+    .filter((a) => a.tag === "free")
+    .reduce((s, a) => s + Number(a.balance), 0);
   if (freeCash > 100000) {
-    alerts.push({ id: alertId++, type: "idle_cash", message: `High idle cash (LKR ${freeCash.toLocaleString()}) — consider deploying`, severity: "info", createdAt: now });
+    alerts.push({
+      id: alertId++,
+      type: "idle_cash",
+      message: `High idle cash (LKR ${freeCash.toLocaleString()}) — consider deploying`,
+      severity: "info",
+      createdAt: now,
+    });
   }
 
   res.json(alerts);
