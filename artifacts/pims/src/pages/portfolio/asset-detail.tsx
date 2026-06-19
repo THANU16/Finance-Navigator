@@ -13,8 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { useState } from "react";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, Legend } from "recharts";
+import { useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -83,6 +83,45 @@ export default function AssetDetail() {
     addValuation.mutate({ id, data: { value: Number(newValue), date: newDate, note: newNote || undefined } });
   };
 
+  const chartData = useMemo(() => {
+    const valuationPoints = (valuations || [])
+      .map((v) => ({ date: v.date, value: Number(v.value) }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const txPoints = (transactions || [])
+      .filter((tx) => tx.type === "invest" || tx.type === "sip" || tx.type === "redeem")
+      .map((tx) => ({ date: tx.date, delta: (tx.type === "redeem" ? -1 : 1) * Number(tx.amount) }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const investedDeltaByDate = new Map<string, number>();
+    for (const tx of txPoints) {
+      investedDeltaByDate.set(tx.date, (investedDeltaByDate.get(tx.date) || 0) + tx.delta);
+    }
+
+    const valuationByDate = new Map<string, number>();
+    for (const v of valuationPoints) {
+      valuationByDate.set(v.date, v.value);
+    }
+
+    const allDates = [...new Set([...valuationByDate.keys(), ...investedDeltaByDate.keys()])].sort();
+
+    let runningInvested = 0;
+    let runningValuation = 0;
+
+    return allDates.map((date) => {
+      runningInvested += investedDeltaByDate.get(date) || 0;
+      if (valuationByDate.has(date)) {
+        runningValuation = valuationByDate.get(date)!;
+      }
+
+      return {
+        date,
+        currentValue: runningValuation,
+        investedValue: Math.max(0, runningInvested),
+      };
+    });
+  }, [valuations, transactions]);
+
   if (isAssetLoading || isValuationsLoading) return <AssetDetailSkeleton />;
 
   if (!asset) {
@@ -94,7 +133,6 @@ export default function AssetDetail() {
     );
   }
 
-  const chartData = valuations ? [...valuations].sort((a, b) => a.date.localeCompare(b.date)) : [];
   const profitLoss = Number(asset.profitLoss) || 0;
   const profitLossPercent = Number(asset.profitLossPercent) || 0;
 
@@ -240,14 +278,9 @@ export default function AssetDetail() {
           <CardContent className="h-[300px]">
             {chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="assetGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                  <Legend verticalAlign="top" align="right" wrapperStyle={{ paddingBottom: "8px", fontSize: "12px" }} />
                   <XAxis
                     dataKey="date"
                     tickFormatter={v => new Date(v).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
@@ -260,12 +293,33 @@ export default function AssetDetail() {
                     tickLine={false} axisLine={false} width={50}
                   />
                   <Tooltip
-                    formatter={(v: number) => [formatCurrency(v, asset.currency), "Value"]}
+                    formatter={(v: number, name: string) => [
+                      formatCurrency(v, asset.currency),
+                      name,
+                    ]}
                     labelFormatter={l => new Date(l).toLocaleDateString()}
                     contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px" }}
                   />
-                  <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fill="url(#assetGrad)" strokeWidth={2} />
-                </AreaChart>
+                  <Line
+                    type="monotone"
+                    dataKey="currentValue"
+                    name="Current Value"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="investedValue"
+                    name="Invested"
+                    stroke="hsl(var(--muted-foreground))"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    activeDot={{ r: 4 }}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground text-sm">

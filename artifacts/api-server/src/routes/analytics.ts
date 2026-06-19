@@ -17,10 +17,11 @@ router.get("/performance", async (req, res): Promise<void> => {
 
   // SIP invested = sum of all SIP execution amounts
   const sipTotalInvested = sipHistory.reduce((s, h) => s + Number(h.totalAmount), 0);
+  const investedInAssets = portfolio.assets.reduce((s, a) => s + a.investedAmount, 0);
 
   // SIP current value = investedAmount * (portfolio return ratio), pro-rated to SIP portion
   // Use the actual portfolio ratio, not an approximation
-  const portfolioReturnRatio = portfolio.totalInvested > 0 ? portfolio.totalCurrentValue / portfolio.totalInvested : 1;
+  const portfolioReturnRatio = investedInAssets > 0 ? portfolio.totalCurrentValue / investedInAssets : 1;
   const sipCurrentValue = sipTotalInvested * portfolioReturnRatio;
   const sipReturn = sipCurrentValue - sipTotalInvested;
 
@@ -54,6 +55,7 @@ router.get("/growth", async (req, res): Promise<void> => {
 
   const investmentAssets = assets.filter((a) => a.category !== "cash");
   const assetIds = investmentAssets.map((a) => a.id);
+  const assetIdSet = new Set(assetIds);
 
   if (assetIds.length === 0) {
     res.json([]);
@@ -67,45 +69,70 @@ router.get("/growth", async (req, res): Promise<void> => {
     .where(inArray(valuationsTable.assetId, assetIds))
     .orderBy(valuationsTable.date);
 
-  // Compute invested amount from transactions
+  // Build invested deltas by date from transactions (invested changes over time).
   const allTxs = await db
     .select()
     .from(transactionsTable)
     .where(eq(transactionsTable.userId, userId));
 
-  const investedByAsset = new Map<number, number>();
+  const investedDeltaByDate = new Map<string, number>();
   for (const tx of allTxs) {
-    if (!tx.assetId) continue;
-    const prev = investedByAsset.get(tx.assetId) ?? 0;
+    if (!tx.assetId || !assetIdSet.has(tx.assetId)) continue;
+    const prev = investedDeltaByDate.get(tx.date) ?? 0;
     if (tx.type === "invest" || tx.type === "sip") {
-      investedByAsset.set(tx.assetId, prev + Number(tx.amount));
+      investedDeltaByDate.set(tx.date, prev + Number(tx.amount));
     } else if (tx.type === "redeem") {
-      investedByAsset.set(tx.assetId, Math.max(0, prev - Number(tx.amount)));
+      investedDeltaByDate.set(tx.date, prev - Number(tx.amount));
     }
   }
-  const totalInvested = Array.from(investedByAsset.values()).reduce((s, v) => s + v, 0);
 
-  // Group valuations by assetId for forward-fill approach
+  // Group valuations by assetId for forward-fill approach.
   const valsByAsset = new Map<number, Array<{ date: string; value: number }>>();
   for (const v of allVals) {
     if (!valsByAsset.has(v.assetId)) valsByAsset.set(v.assetId, []);
     valsByAsset.get(v.assetId)!.push({ date: v.date, value: Number(v.value) });
   }
 
-  // Collect all unique dates
-  const allDates = [...new Set(allVals.map((v) => v.date))].sort();
+  // Use union of valuation dates and transaction dates so both lines can change on their own dates.
+  const allDates = [...new Set([...allVals.map((v) => v.date), ...investedDeltaByDate.keys()])].sort();
 
-  // For each date, compute total portfolio value (sum of each asset's latest valuation on or before that date)
+  if (allDates.length === 0) {
+    res.json([]);
+    return;
+  }
+
+  // Keep a moving pointer per asset for O(N) forward-fill over sorted dates.
+  const valueIndexByAsset = new Map<number, number>();
+  const currentValueByAsset = new Map<number, number>();
+  for (const assetId of assetIds) {
+    valueIndexByAsset.set(assetId, 0);
+    currentValueByAsset.set(assetId, 0);
+  }
+
+  // For each date, compute portfolio value and cumulative invested.
+  let cumulativeInvested = 0;
   const growthData = allDates.map((date) => {
+    cumulativeInvested += investedDeltaByDate.get(date) ?? 0;
+
     let totalValue = 0;
-    for (const [, vals] of valsByAsset) {
-      // Find latest val on or before this date
-      const relevant = vals.filter((v) => v.date <= date);
-      if (relevant.length > 0) {
-        totalValue += relevant[relevant.length - 1].value;
+    for (const assetId of assetIds) {
+      const vals = valsByAsset.get(assetId) ?? [];
+      let idx = valueIndexByAsset.get(assetId) ?? 0;
+
+      while (idx < vals.length && vals[idx].date <= date) {
+        currentValueByAsset.set(assetId, vals[idx].value);
+        idx += 1;
       }
+
+      valueIndexByAsset.set(assetId, idx);
+      totalValue += currentValueByAsset.get(assetId) ?? 0;
     }
-    return { date, totalValue, invested: totalInvested };
+
+    return {
+      date,
+      totalValue,
+      invested: Math.max(0, cumulativeInvested),
+    };
   });
 
   // Filter by period
@@ -118,7 +145,8 @@ router.get("/growth", async (req, res): Promise<void> => {
   if (filtered.length === 0) {
     // Return current snapshot
     const portfolio = await getPortfolioMetrics(userId);
-    res.json([{ date: now.toISOString().split("T")[0], totalValue: portfolio.totalCurrentValue, invested: portfolio.totalInvested }]);
+    const investedInAssets = portfolio.assets.reduce((s, a) => s + a.investedAmount, 0);
+    res.json([{ date: now.toISOString().split("T")[0], totalValue: portfolio.totalCurrentValue, invested: investedInAssets }]);
     return;
   }
 

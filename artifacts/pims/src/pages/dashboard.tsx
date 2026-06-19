@@ -31,11 +31,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
+  Legend,
   CartesianGrid,
   PieChart,
   Pie,
@@ -249,46 +250,19 @@ export default function Dashboard() {
           <CardContent className="h-[300px]">
             {growthData && growthData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
+                <LineChart
                   data={growthData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                 >
-                  <defs>
-                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="5%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0.3}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="hsl(var(--primary))"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                    <linearGradient
-                      id="colorInvested"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop
-                        offset="5%"
-                        stopColor="hsl(var(--muted-foreground))"
-                        stopOpacity={0.1}
-                      />
-                      <stop
-                        offset="95%"
-                        stopColor="hsl(var(--muted-foreground))"
-                        stopOpacity={0}
-                      />
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
                     stroke="hsl(var(--border))"
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    wrapperStyle={{ paddingBottom: "8px", fontSize: "12px" }}
                   />
                   <XAxis
                     dataKey="date"
@@ -324,26 +298,26 @@ export default function Dashboard() {
                       borderRadius: "8px",
                     }}
                   />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="totalValue"
                     name="Current Value"
                     stroke="hsl(var(--primary))"
-                    fillOpacity={1}
-                    fill="url(#colorValue)"
                     strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 4 }}
                   />
-                  <Area
+                  <Line
                     type="monotone"
                     dataKey="invested"
                     name="Invested"
                     stroke="hsl(var(--muted-foreground))"
-                    fillOpacity={1}
-                    fill="url(#colorInvested)"
                     strokeWidth={2}
                     strokeDasharray="5 5"
+                    dot={false}
+                    activeDot={{ r: 4 }}
                   />
-                </AreaChart>
+                </LineChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
