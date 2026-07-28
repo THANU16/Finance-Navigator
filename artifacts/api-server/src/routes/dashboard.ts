@@ -14,6 +14,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   Cash: "#6b7280",
 };
 
+const toTwoDecimals = (value: number) => Number(value.toFixed(2));
+
 router.get("/summary", async (req, res): Promise<void> => {
   const userId = req.user!.userId;
 
@@ -44,14 +46,17 @@ router.get("/summary", async (req, res): Promise<void> => {
     "Equity Funds",
     "Debt Funds",
     "Precious Metals",
-    "Cash",
+    // "Cash",
   ].map((catName) => {
     const value =
       catName === "Cash" ? totalCashValue : (catValueMap.get(catName) ?? 0);
     return {
       category: catName,
       value,
-      percent: totalValue > 0 ? (value / totalValue) * 100 : 0,
+      percent:
+        totalValue - totalCashValue > 0
+          ? toTwoDecimals((value / (totalValue - totalCashValue)) * 100)
+          : 0,
       color: CATEGORY_COLORS[catName],
     };
   });
@@ -65,7 +70,7 @@ router.get("/summary", async (req, res): Promise<void> => {
     .reduce((s, a) => s + Number(a.balance), 0);
   const emergencyFundPercent =
     emergencyFundRequired > 0
-      ? (emergencyFundCurrent / emergencyFundRequired) * 100
+      ? toTwoDecimals((emergencyFundCurrent / emergencyFundRequired) * 100)
       : 0;
   const cashAvailable = accounts
     .filter((a) => a.tag === "free")
@@ -93,18 +98,18 @@ router.get("/summary", async (req, res): Promise<void> => {
   res.json({
     totalValue,
     investedValue: {
-      assets: portfolio.totalInvested,
-      cash: totalCashValue,
+      assets: toTwoDecimals(portfolio.totalInvested),
+      cash: toTwoDecimals(totalCashValue),
     },
-    profitLoss: portfolio.totalReturn,
-    profitLossPercent: portfolio.totalReturnPercent,
-    monthlyReturn: portfolio.totalReturn,
-    monthlyReturnPercent: portfolio.totalReturnPercent,
+    profitLoss: toTwoDecimals(portfolio.totalReturn),
+    profitLossPercent: toTwoDecimals(portfolio.totalReturnPercent),
+    monthlyReturn: toTwoDecimals(portfolio.totalReturn),
+    monthlyReturnPercent: toTwoDecimals(portfolio.totalReturnPercent),
     allocationByCategory,
     emergencyFundRequired,
-    emergencyFundCurrent,
-    emergencyFundPercent,
-    cashAvailable,
+    emergencyFundCurrent: toTwoDecimals(emergencyFundCurrent),
+    emergencyFundPercent: toTwoDecimals(emergencyFundPercent),
+    cashAvailable: toTwoDecimals(cashAvailable),
     bestCategory,
     worstCategory,
     riskLevel,
