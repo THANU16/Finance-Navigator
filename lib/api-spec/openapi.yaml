@@ -1432,6 +1432,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SipAssetAllocation"
+        opportunityAllocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SipAccountAllocation"
         updatedAt:
           type: string
       required:
@@ -1442,6 +1446,7 @@ components:
         - metalsPercent
         - opportunityPercent
         - assetAllocations
+        - opportunityAllocations
         - updatedAt
 
     SipAssetAllocation:
@@ -1461,6 +1466,20 @@ components:
         - category
         - percent
 
+    SipAccountAllocation:
+      type: object
+      properties:
+        accountId:
+          type: integer
+        accountName:
+          type: string
+        percent:
+          type: number
+      required:
+        - accountId
+        - accountName
+        - percent
+
     UpdateSipConfigBody:
       type: object
       properties:
@@ -1478,6 +1497,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/SipAssetAllocation"
+        opportunityAllocations:
+          type: array
+          items:
+            $ref: "#/components/schemas/SipAccountAllocation"
       required:
         - monthlyAmount
         - equityPercent
@@ -1485,6 +1508,7 @@ components:
         - metalsPercent
         - opportunityPercent
         - assetAllocations
+        - opportunityAllocations
 
     SipHistoryEntry:
       type: object

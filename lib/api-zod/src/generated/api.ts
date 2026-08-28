@@ -600,6 +600,13 @@ export const GetSipConfigResponse = zod.object({
       percent: zod.number(),
     }),
   ),
+  opportunityAllocations: zod.array(
+    zod.object({
+      accountId: zod.number(),
+      accountName: zod.string(),
+      percent: zod.number(),
+    }),
+  ),
   updatedAt: zod.string(),
 });
 
@@ -620,6 +627,13 @@ export const UpdateSipConfigBody = zod.object({
       percent: zod.number(),
     }),
   ),
+  opportunityAllocations: zod.array(
+    zod.object({
+      accountId: zod.number(),
+      accountName: zod.string(),
+      percent: zod.number(),
+    }),
+  ),
 });
 
 export const UpdateSipConfigResponse = zod.object({
@@ -634,6 +648,13 @@ export const UpdateSipConfigResponse = zod.object({
       assetId: zod.number(),
       assetName: zod.string(),
       category: zod.string(),
+      percent: zod.number(),
+    }),
+  ),
+  opportunityAllocations: zod.array(
+    zod.object({
+      accountId: zod.number(),
+      accountName: zod.string(),
       percent: zod.number(),
     }),
   ),

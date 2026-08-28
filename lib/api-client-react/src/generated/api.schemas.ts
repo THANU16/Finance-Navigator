@@ -388,6 +388,12 @@ export interface SipAssetAllocation {
   percent: number;
 }
 
+export interface SipAccountAllocation {
+  accountId: number;
+  accountName: string;
+  percent: number;
+}
+
 export interface SipConfig {
   id: number;
   monthlyAmount: number;
@@ -396,6 +402,7 @@ export interface SipConfig {
   metalsPercent: number;
   opportunityPercent: number;
   assetAllocations: SipAssetAllocation[];
+  opportunityAllocations: SipAccountAllocation[];
   updatedAt: string;
 }
 
@@ -406,6 +413,7 @@ export interface UpdateSipConfigBody {
   metalsPercent: number;
   opportunityPercent: number;
   assetAllocations: SipAssetAllocation[];
+  opportunityAllocations: SipAccountAllocation[];
 }
 
 export interface SipBreakdownItem {

@@ -19,6 +19,7 @@ function formatConfig(c: typeof sipConfigsTable.$inferSelect) {
     metalsPercent: Number(c.metalsPercent),
     opportunityPercent: Number(c.opportunityPercent),
     assetAllocations: (c.assetAllocations as unknown[]) || [],
+    opportunityAllocations: (c.opportunityAllocations as unknown[]) || [],
     updatedAt: c.updatedAt.toISOString(),
   };
 }
@@ -55,6 +56,7 @@ router.put("/", async (req, res): Promise<void> => {
     metalsPercent,
     opportunityPercent,
     assetAllocations,
+    opportunityAllocations,
   } = parsed.data;
   const total =
     equityPercent + debtPercent + metalsPercent + opportunityPercent;
@@ -87,6 +89,19 @@ router.put("/", async (req, res): Promise<void> => {
     }
   }
 
+  if (opportunityAllocations.length > 0) {
+    const oppTotal = opportunityAllocations.reduce(
+      (sum: number, a) => sum + Number(a.percent || 0),
+      0,
+    );
+    if (Math.abs(oppTotal - opportunityPercent) > 0.01) {
+      res.status(400).json({
+        error: `Opportunity allocations must sum to ${opportunityPercent}%`,
+      });
+      return;
+    }
+  }
+
   let [config] = await db
     .select()
     .from(sipConfigsTable)
@@ -103,6 +118,7 @@ router.put("/", async (req, res): Promise<void> => {
         metalsPercent: metalsPercent.toString(),
         opportunityPercent: opportunityPercent.toString(),
         assetAllocations: assetAllocations as unknown as string,
+        opportunityAllocations: opportunityAllocations as unknown as string,
       })
       .returning();
     config = newConfig;
@@ -116,6 +132,7 @@ router.put("/", async (req, res): Promise<void> => {
         metalsPercent: metalsPercent.toString(),
         opportunityPercent: opportunityPercent.toString(),
         assetAllocations: assetAllocations as unknown as string,
+        opportunityAllocations: opportunityAllocations as unknown as string,
       })
       .where(eq(sipConfigsTable.userId, userId))
       .returning();

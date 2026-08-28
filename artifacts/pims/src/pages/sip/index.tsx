@@ -9,6 +9,8 @@ import {
   getGetTransactionsQueryKey,
   useGetAssets,
   getGetAssetsQueryKey,
+  useGetAccounts,
+  getGetAccountsQueryKey,
 } from "@workspace/api-client-react";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -60,6 +62,12 @@ interface AssetAlloc {
   percent: number;
 }
 
+interface AccountAlloc {
+  accountId: number;
+  accountName: string;
+  percent: number;
+}
+
 type Category = "equity_fund" | "debt_fund" | "metal";
 
 const CATEGORY_LABELS: Record<
@@ -88,6 +96,13 @@ export default function SipPlanner() {
   const { data: assets } = useGetAssets({
     query: { queryKey: getGetAssetsQueryKey() },
   });
+  const { data: accounts } = useGetAccounts({
+    query: { queryKey: getGetAccountsQueryKey() },
+  });
+
+  const opportunityAccounts = (accounts || []).filter(
+    (a) => a.tag === "opportunity" && a.isActive,
+  );
 
   const [monthlyAmount, setMonthlyAmount] = useState(0);
   const [equityPercent, setEquityPercent] = useState(60);
@@ -95,6 +110,7 @@ export default function SipPlanner() {
   const [metalsPercent, setMetalsPercent] = useState(10);
   const [opportunityPercent, setOpportunityPercent] = useState(10);
   const [allocs, setAllocs] = useState<AssetAlloc[]>([]);
+  const [oppAllocs, setOppAllocs] = useState<AccountAlloc[]>([]);
   const [initialized, setInitialized] = useState(false);
 
   // Execute SIP dialog
@@ -113,6 +129,7 @@ export default function SipPlanner() {
       setMetalsPercent(config.metalsPercent);
       setOpportunityPercent(config.opportunityPercent);
       setAllocs((config.assetAllocations || []) as AssetAlloc[]);
+      setOppAllocs((config.opportunityAllocations || []) as AccountAlloc[]);
       setInitialized(true);
     }
   }, [config, initialized]);
@@ -174,6 +191,47 @@ export default function SipPlanner() {
   const allAllocsValid = (
     ["equity_fund", "debt_fund", "metal"] as Category[]
   ).every(allocValid);
+
+  // Opportunity sub-allocation helpers
+  const oppAllocTotal = oppAllocs.reduce(
+    (s, a) => s + (Number(a.percent) || 0),
+    0,
+  );
+  const oppAllocValid =
+    oppAllocs.length === 0 ||
+    Math.abs(oppAllocTotal - opportunityPercent) < 0.01;
+
+  const addOppAlloc = () => {
+    const available = opportunityAccounts.filter(
+      (a) => !oppAllocs.find((al) => al.accountId === a.id),
+    );
+    if (!available.length) return;
+    const first = available[0];
+    setOppAllocs((prev) => [
+      ...prev,
+      { accountId: first.id, accountName: first.name, percent: 0 },
+    ]);
+  };
+
+  const removeOppAlloc = (idx: number) => {
+    setOppAllocs((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateOppAllocAccount = (idx: number, accountId: number) => {
+    const found = opportunityAccounts.find((a) => a.id === accountId);
+    if (!found) return;
+    setOppAllocs((prev) =>
+      prev.map((a, i) =>
+        i === idx ? { ...a, accountId: found.id, accountName: found.name } : a,
+      ),
+    );
+  };
+
+  const updateOppAllocPercent = (idx: number, val: string) => {
+    setOppAllocs((prev) =>
+      prev.map((a, i) => (i === idx ? { ...a, percent: Number(val) } : a)),
+    );
+  };
 
   const addAlloc = (cat: Category) => {
     const available = (assets || []).filter(
@@ -238,6 +296,13 @@ export default function SipPlanner() {
       });
       return;
     }
+    if (!oppAllocValid) {
+      toast({
+        title: "Opportunity allocations must match the opportunity percentage",
+        variant: "destructive",
+      });
+      return;
+    }
     updateSip.mutate({
       data: {
         monthlyAmount,
@@ -246,6 +311,7 @@ export default function SipPlanner() {
         metalsPercent,
         opportunityPercent,
         assetAllocations: allocs,
+        opportunityAllocations: oppAllocs,
       },
     });
   };
@@ -308,26 +374,50 @@ export default function SipPlanner() {
         }
       }
 
-      // Opportunity fund allocation: tag_allocation
+      // Opportunity fund: per-account tag_allocation if sub-allocations configured
       if (opportunityPercent > 0) {
-        const oppAmount = (monthlyAmount * opportunityPercent) / 100;
-        await new Promise<void>((resolve, reject) => {
-          createTx.mutate(
-            {
-              data: {
-                type: "tag_allocation",
-                amount: oppAmount,
-                tag: "opportunity",
-                date: today,
-                note: `SIP Opportunity ${execMonth}`,
+        if (oppAllocs.length > 0) {
+          for (const al of oppAllocs) {
+            const amount = (monthlyAmount * al.percent) / 100;
+            if (amount <= 0) continue;
+            await new Promise<void>((resolve, reject) => {
+              createTx.mutate(
+                {
+                  data: {
+                    type: "tag_allocation",
+                    amount,
+                    destinationAccountId: al.accountId,
+                    tag: "opportunity",
+                    date: today,
+                    note: `SIP Opportunity ${execMonth} - ${al.accountName}`,
+                  },
+                },
+                { onSuccess: () => resolve(), onError: reject },
+              );
+            });
+            breakdown.push({
+              assetId: 0,
+              assetName: al.accountName,
+              amount,
+            });
+          }
+        } else {
+          const oppAmount = (monthlyAmount * opportunityPercent) / 100;
+          await new Promise<void>((resolve, reject) => {
+            createTx.mutate(
+              {
+                data: {
+                  type: "tag_allocation",
+                  amount: oppAmount,
+                  tag: "opportunity",
+                  date: today,
+                  note: `SIP Opportunity ${execMonth}`,
+                },
               },
-            },
-            {
-              onSuccess: () => resolve(),
-              onError: reject,
-            },
-          );
-        });
+              { onSuccess: () => resolve(), onError: reject },
+            );
+          });
+        }
       }
 
       // Record SIP history
@@ -624,24 +714,141 @@ export default function SipPlanner() {
             );
           })}
 
-          {/* Opportunity allocation note */}
-          <Card className="border-green-500/20 bg-green-500/5">
-            <CardHeader>
-              <CardTitle className="text-green-500 text-base">
-                Opportunity Fund Allocation
-              </CardTitle>
-              <CardDescription>
-                {formatCurrency(monthlyOpportunity)}/month goes to your
-                opportunity cash tag automatically on Execute SIP. Manage the
-                deployment strategy in the Opportunity page.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          {/* Opportunity Fund Sub-allocation */}
+          {opportunityAccounts.length > 0 && (
+            <Card className="border-green-500/20">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-green-500">
+                      Opportunity Fund Sub-allocation
+                    </CardTitle>
+                    <CardDescription>
+                      Distribute {formatCurrency(monthlyOpportunity)}/month
+                      across your opportunity bank accounts. Sum must equal{" "}
+                      {opportunityPercent}%.
+                    </CardDescription>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addOppAlloc}
+                    disabled={opportunityAccounts.length === oppAllocs.length}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Account
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!oppAllocValid && oppAllocs.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Allocations sum to <strong>{oppAllocTotal}%</strong>. Must
+                      equal <strong>{opportunityPercent}%</strong>.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {oppAllocs.length === 0 ? (
+                  <div className="p-6 text-center text-muted-foreground border rounded-lg bg-muted/10 text-sm">
+                    No sub-allocations set. Add accounts above to distribute the
+                    opportunity fund ({opportunityPercent}%) across specific
+                    bank accounts on execute.
+                  </div>
+                ) : (
+                  oppAllocs.map((alloc, idx) => {
+                    const acctAmount = (monthlyAmount * alloc.percent) / 100;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-muted/10"
+                      >
+                        <div className="flex-1">
+                          <Select
+                            value={String(alloc.accountId)}
+                            onValueChange={(v) =>
+                              updateOppAllocAccount(idx, Number(v))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select account" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {opportunityAccounts.map((a) => (
+                                <SelectItem key={a.id} value={String(a.id)}>
+                                  {a.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1 w-28">
+                          <Input
+                            type="number"
+                            value={alloc.percent}
+                            onChange={(e) =>
+                              updateOppAllocPercent(idx, e.target.value)
+                            }
+                            min={0}
+                            max={100}
+                            className="text-center"
+                          />
+                          <span className="text-muted-foreground text-sm shrink-0">
+                            %
+                          </span>
+                        </div>
+                        <div className="w-28 text-right text-sm text-muted-foreground shrink-0">
+                          {formatCurrency(acctAmount)}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeOppAlloc(idx)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+                {oppAllocs.length > 0 && (
+                  <div
+                    className={`text-sm font-medium text-right pt-2 border-t ${oppAllocValid ? "text-green-500" : "text-red-500"}`}
+                  >
+                    Total: {oppAllocTotal}%{" "}
+                    {oppAllocValid
+                      ? "✓"
+                      : `(target ${opportunityPercent}%, ${oppAllocTotal < opportunityPercent ? `need ${(opportunityPercent - oppAllocTotal).toFixed(1)}% more` : `over by ${(oppAllocTotal - opportunityPercent).toFixed(1)}%`})`}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {opportunityAccounts.length === 0 && (
+            <Card className="border-green-500/20 bg-green-500/5">
+              <CardHeader>
+                <CardTitle className="text-green-500 text-base">
+                  Opportunity Fund Allocation
+                </CardTitle>
+                <CardDescription>
+                  {formatCurrency(monthlyOpportunity)}/month goes to your
+                  opportunity cash tag automatically on Execute SIP. Add
+                  opportunity bank accounts to enable sub-allocation.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
 
           <div className="flex justify-end gap-3">
             <Button
               onClick={handleSave}
-              disabled={updateSip.isPending || !categoryValid}
+              disabled={
+                updateSip.isPending ||
+                !categoryValid ||
+                !allAllocsValid ||
+                !oppAllocValid
+              }
             >
               {updateSip.isPending && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,5 +1,6 @@
 # API server
 
+pnpm --filter @workspace/api-server run build
 pnpm --filter @workspace/api-server run dev
 pnpm --filter @workspace/api-server run start
 
