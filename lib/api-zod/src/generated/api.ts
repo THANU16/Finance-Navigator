@@ -878,8 +878,13 @@ export const GetDeploymentHistoryResponseItem = zod.object({
   id: zod.number(),
   dropPercent: zod.number(),
   deployedAmount: zod.number(),
-  assetId: zod.number().nullish(),
-  assetName: zod.string().nullish(),
+  allocations: zod.array(
+    zod.object({
+      assetId: zod.number().nullish(),
+      assetName: zod.string().nullish(),
+      amount: zod.number(),
+    }),
+  ),
   note: zod.string().nullish(),
   deployedAt: zod.string(),
 });
@@ -892,8 +897,13 @@ export const GetDeploymentHistoryResponse = zod.array(
  */
 export const RecordDeploymentBody = zod.object({
   dropPercent: zod.number(),
-  deployedAmount: zod.number(),
-  assetId: zod.number().nullish(),
+  sourceAccountId: zod.number().nullish(),
+  allocations: zod.array(
+    zod.object({
+      assetId: zod.number().nullish(),
+      amount: zod.number(),
+    }),
+  ),
   note: zod.string().nullish(),
   deployedAt: zod.string(),
 });

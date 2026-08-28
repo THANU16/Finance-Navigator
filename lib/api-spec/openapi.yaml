@@ -1846,10 +1846,19 @@ components:
           type: number
         deployedAmount:
           type: number
-        assetId:
-          type: ["integer", "null"]
-        assetName:
-          type: ["string", "null"]
+        allocations:
+          type: array
+          items:
+            type: object
+            properties:
+              assetId:
+                type: ["integer", "null"]
+              assetName:
+                type: ["string", "null"]
+              amount:
+                type: number
+            required:
+              - amount
         note:
           type: ["string", "null"]
         deployedAt:
@@ -1858,6 +1867,7 @@ components:
         - id
         - dropPercent
         - deployedAmount
+        - allocations
         - deployedAt
 
     RecordDeploymentBody:
@@ -1865,15 +1875,24 @@ components:
       properties:
         dropPercent:
           type: number
-        deployedAmount:
-          type: number
-        assetId:
+        sourceAccountId:
           type: ["integer", "null"]
+        allocations:
+          type: array
+          items:
+            type: object
+            properties:
+              assetId:
+                type: ["integer", "null"]
+              amount:
+                type: number
+            required:
+              - amount
         note:
           type: ["string", "null"]
         deployedAt:
           type: string
       required:
         - dropPercent
-        - deployedAmount
+        - allocations
         - deployedAt

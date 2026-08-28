@@ -572,23 +572,34 @@ export interface Deployment {
   id: number;
   dropPercent: number;
   deployedAmount: number;
-  /** @nullable */
-  assetId?: number | null;
-  /** @nullable */
-  assetName?: string | null;
+  allocations: DeploymentAllocation[];
   /** @nullable */
   note?: string | null;
   deployedAt: string;
 }
 
-export interface RecordDeploymentBody {
-  dropPercent: number;
-  deployedAmount: number;
+export interface DeploymentAllocation {
   /** @nullable */
   assetId?: number | null;
   /** @nullable */
+  assetName?: string | null;
+  amount: number;
+}
+
+export interface RecordDeploymentBody {
+  dropPercent: number;
+  /** @nullable */
+  sourceAccountId?: number | null;
+  allocations: RecordDeploymentAllocation[];
+  /** @nullable */
   note?: string | null;
   deployedAt: string;
+}
+
+export interface RecordDeploymentAllocation {
+  /** @nullable */
+  assetId?: number | null;
+  amount: number;
 }
 
 export type GetAssetsParams = {
