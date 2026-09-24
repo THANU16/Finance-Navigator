@@ -4,9 +4,11 @@ import {
   useGetTransactions, getGetTransactionsQueryKey,
   useAddAssetValuation, useDeleteAssetValuation,
 } from "@workspace/api-client-react";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { formatCurrency, formatPercent, getPeriodCutoffDate, computePeriodReturn } from "@/lib/utils";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PeriodReturnBadge } from "@/components/period-return-badge";
 import { useParams, Link } from "wouter";
 import { ArrowLeft, TrendingUp, Wallet, Percent, FileText, Plus, Trash2, Loader2, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,30 @@ import { useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+type ChartPeriod = "1d" | "1w" | "1m" | "3m" | "6m" | "1y" | "all";
+
+interface AssetChartPoint {
+  date: string;
+  currentValue: number;
+  investedValue: number;
+}
+
+/**
+ * Filter an already forward-filled series to a timeframe, seeding a
+ * synthetic point at the cutoff date (carrying the last known value forward)
+ * so the period's "start" value is correct even when no event happened
+ * exactly on/after the cutoff date.
+ */
+function filterByPeriod(series: AssetChartPoint[], period: ChartPeriod): AssetChartPoint[] {
+  const cutoff = getPeriodCutoffDate(period);
+  if (!cutoff) return series;
+  const before = series.filter((p) => p.date < cutoff);
+  const withinOrAfter = series.filter((p) => p.date >= cutoff);
+  const seed = before.length > 0 ? { ...before[before.length - 1], date: cutoff } : null;
+  if (seed && withinOrAfter[0]?.date !== cutoff) return [seed, ...withinOrAfter];
+  return withinOrAfter;
+}
 
 const TX_COLORS: Record<string, string> = {
   invest: "text-blue-500",
@@ -34,6 +60,7 @@ export default function AssetDetail() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  const [period, setPeriod] = useState<ChartPeriod>("1y");
   const [showAddValuation, setShowAddValuation] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [newDate, setNewDate] = useState(new Date().toISOString().slice(0, 10));
@@ -83,7 +110,7 @@ export default function AssetDetail() {
     addValuation.mutate({ id, data: { value: Number(newValue), date: newDate, note: newNote || undefined } });
   };
 
-  const chartData = useMemo(() => {
+  const fullChartData = useMemo((): AssetChartPoint[] => {
     const valuationPoints = (valuations || [])
       .map((v) => ({ date: v.date, value: Number(v.value) }))
       .sort((a, b) => a.date.localeCompare(b.date));
@@ -121,6 +148,16 @@ export default function AssetDetail() {
       };
     });
   }, [valuations, transactions]);
+
+  const chartData = useMemo(
+    () => filterByPeriod(fullChartData, period),
+    [fullChartData, period],
+  );
+
+  const periodReturn = useMemo(
+    () => computePeriodReturn(chartData.map((d) => ({ date: d.date, totalValue: d.currentValue, invested: d.investedValue }))),
+    [chartData],
+  );
 
   if (isAssetLoading || isValuationsLoading) return <AssetDetailSkeleton />;
 
@@ -271,9 +308,25 @@ export default function AssetDetail() {
       {/* Performance chart + Valuation log */}
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Valuation History</CardTitle>
-            <CardDescription>Value over time based on logged snapshots</CardDescription>
+          <CardHeader className="flex flex-col gap-3">
+            <div className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Valuation History</CardTitle>
+                <CardDescription>Value over time based on logged snapshots</CardDescription>
+              </div>
+              <PeriodReturnBadge periodReturn={periodReturn} />
+            </div>
+            <Tabs value={period} onValueChange={(v) => setPeriod(v as ChartPeriod)}>
+              <TabsList className="grid grid-cols-7 h-8">
+                <TabsTrigger className="text-xs" value="1d" data-testid="tab-asset-1d">1D</TabsTrigger>
+                <TabsTrigger className="text-xs" value="1w" data-testid="tab-asset-1w">1W</TabsTrigger>
+                <TabsTrigger className="text-xs" value="1m" data-testid="tab-asset-1m">1M</TabsTrigger>
+                <TabsTrigger className="text-xs" value="3m" data-testid="tab-asset-3m">3M</TabsTrigger>
+                <TabsTrigger className="text-xs" value="6m" data-testid="tab-asset-6m">6M</TabsTrigger>
+                <TabsTrigger className="text-xs" value="1y" data-testid="tab-asset-1y">1Y</TabsTrigger>
+                <TabsTrigger className="text-xs" value="all" data-testid="tab-asset-all">All</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent className="h-[300px]">
             {chartData.length > 0 ? (
@@ -321,6 +374,10 @@ export default function AssetDetail() {
                   />
                 </LineChart>
               </ResponsiveContainer>
+            ) : fullChartData.length > 0 ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                No data in this timeframe.
+              </div>
             ) : (
               <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground text-sm">
                 <p>No valuation snapshots yet.</p>

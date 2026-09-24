@@ -18,6 +18,24 @@ export function formatPercent(value: number) {
   return `${(value).toFixed(2)}%`;
 }
 
+const PERIOD_DAYS: Record<string, number> = { "1d": 1, "1w": 7, "1m": 30, "3m": 90, "6m": 180, "1y": 365 };
+
+/**
+ * Cutoff date (YYYY-MM-DD, local calendar day) for a timeframe period, or
+ * null for "all". Computed entirely in local calendar-day space (not via
+ * exact-instant subtraction + UTC truncation) so the window is a clean N
+ * calendar days regardless of what time of day it's checked.
+ */
+export function getPeriodCutoffDate(period: string, today: Date = new Date()): string | null {
+  const days = PERIOD_DAYS[period];
+  if (!days) return null;
+  const cutoff = new Date(today.getFullYear(), today.getMonth(), today.getDate() - days);
+  const y = cutoff.getFullYear();
+  const m = String(cutoff.getMonth() + 1).padStart(2, "0");
+  const d = String(cutoff.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export interface PeriodReturn {
   startDate: string;
   endDate: string;
