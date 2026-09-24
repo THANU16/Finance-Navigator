@@ -50,6 +50,12 @@ export interface AuthResponse {
   token: string;
 }
 
+export type DashboardSummaryInvestedValue = {
+  assets?: number;
+  cash?: number;
+  required?: unknown;
+};
+
 export interface CategoryAllocation {
   category: string;
   value: number;
@@ -59,10 +65,7 @@ export interface CategoryAllocation {
 
 export interface DashboardSummary {
   totalValue: number;
-  investedValue: {
-    assets: number;
-    cash: number;
-  };
+  investedValue: DashboardSummaryInvestedValue;
   profitLoss: number;
   profitLossPercent: number;
   monthlyReturn: number;
@@ -568,38 +571,38 @@ export interface OpportunityStatus {
   stages: OpportunityStage[];
 }
 
-export interface Deployment {
-  id: number;
-  dropPercent: number;
-  deployedAmount: number;
-  allocations: DeploymentAllocation[];
-  /** @nullable */
-  note?: string | null;
-  deployedAt: string;
-}
-
-export interface DeploymentAllocation {
+export type DeploymentAllocationsItem = {
   /** @nullable */
   assetId?: number | null;
   /** @nullable */
   assetName?: string | null;
   amount: number;
-}
+};
 
-export interface RecordDeploymentBody {
+export interface Deployment {
+  id: number;
   dropPercent: number;
-  /** @nullable */
-  sourceAccountId?: number | null;
-  allocations: RecordDeploymentAllocation[];
+  deployedAmount: number;
+  allocations: DeploymentAllocationsItem[];
   /** @nullable */
   note?: string | null;
   deployedAt: string;
 }
 
-export interface RecordDeploymentAllocation {
+export type RecordDeploymentBodyAllocationsItem = {
   /** @nullable */
   assetId?: number | null;
   amount: number;
+};
+
+export interface RecordDeploymentBody {
+  dropPercent: number;
+  /** @nullable */
+  sourceAccountId?: number | null;
+  allocations: RecordDeploymentBodyAllocationsItem[];
+  /** @nullable */
+  note?: string | null;
+  deployedAt: string;
 }
 
 export type GetAssetsParams = {
@@ -633,6 +636,8 @@ export type GetPerformanceAnalyticsPeriod =
   (typeof GetPerformanceAnalyticsPeriod)[keyof typeof GetPerformanceAnalyticsPeriod];
 
 export const GetPerformanceAnalyticsPeriod = {
+  "1d": "1d",
+  "1w": "1w",
   "1m": "1m",
   "3m": "3m",
   "6m": "6m",
@@ -648,6 +653,8 @@ export type GetGrowthChartPeriod =
   (typeof GetGrowthChartPeriod)[keyof typeof GetGrowthChartPeriod];
 
 export const GetGrowthChartPeriod = {
+  "1d": "1d",
+  "1w": "1w",
   "1m": "1m",
   "3m": "3m",
   "6m": "6m",

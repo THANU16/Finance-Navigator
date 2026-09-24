@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatPercent } from "@/lib/utils";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCurrency, formatPercent, computePeriodReturn } from "@/lib/utils";
+import { PeriodReturnBadge } from "@/components/period-return-badge";
 import {
   AlertCircle,
   ArrowDownRight,
@@ -49,6 +51,7 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [recalculating, setRecalculating] = useState(false);
+  const [growthPeriod, setGrowthPeriod] = useState<"1d" | "1w" | "1m" | "3m" | "6m" | "1y" | "all">("1y");
 
   const { data: summary, isLoading: isSummaryLoading } = useGetDashboardSummary(
     {
@@ -61,9 +64,11 @@ export default function Dashboard() {
   });
 
   const { data: growthData, isLoading: isGrowthLoading } = useGetGrowthChart(
-    { period: "1y" },
-    { query: { queryKey: getGetGrowthChartQueryKey({ period: "1y" }) } },
+    { period: growthPeriod },
+    { query: { queryKey: getGetGrowthChartQueryKey({ period: growthPeriod }) } },
   );
+
+  const growthPeriodReturn = computePeriodReturn(growthData);
 
   const handleRecalculate = async () => {
     setRecalculating(true);
@@ -79,7 +84,7 @@ export default function Dashboard() {
     }
   };
 
-  if (isSummaryLoading || isAlertsLoading || isGrowthLoading) {
+  if (isSummaryLoading || isAlertsLoading) {
     return <DashboardSkeleton />;
   }
 
@@ -241,14 +246,32 @@ export default function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-7 lg:grid-cols-7">
         <Card className="md:col-span-4 lg:col-span-5">
-          <CardHeader>
-            <CardTitle>Portfolio Growth (1Y)</CardTitle>
-            <CardDescription>
-              Net worth vs invested capital over time
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-3">
+            <div className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle>Portfolio Growth</CardTitle>
+                <CardDescription>
+                  Net worth vs invested capital over time
+                </CardDescription>
+              </div>
+              <PeriodReturnBadge periodReturn={growthPeriodReturn} />
+            </div>
+            <Tabs value={growthPeriod} onValueChange={(v) => setGrowthPeriod(v as any)}>
+              <TabsList className="grid grid-cols-7 h-8">
+                <TabsTrigger className="text-xs" value="1d" data-testid="tab-growth-1d">1D</TabsTrigger>
+                <TabsTrigger className="text-xs" value="1w" data-testid="tab-growth-1w">1W</TabsTrigger>
+                <TabsTrigger className="text-xs" value="1m" data-testid="tab-growth-1m">1M</TabsTrigger>
+                <TabsTrigger className="text-xs" value="3m" data-testid="tab-growth-3m">3M</TabsTrigger>
+                <TabsTrigger className="text-xs" value="6m" data-testid="tab-growth-6m">6M</TabsTrigger>
+                <TabsTrigger className="text-xs" value="1y" data-testid="tab-growth-1y">1Y</TabsTrigger>
+                <TabsTrigger className="text-xs" value="all" data-testid="tab-growth-all">All</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </CardHeader>
           <CardContent className="h-[300px]">
-            {growthData && growthData.length > 0 ? (
+            {isGrowthLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : growthData && growthData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={growthData}

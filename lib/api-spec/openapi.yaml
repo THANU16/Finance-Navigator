@@ -700,7 +700,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [1m, 3m, 6m, 1y, all]
+            enum: [1d, 1w, 1m, 3m, 6m, 1y, all]
       responses:
         "200":
           description: Performance analytics
@@ -719,7 +719,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [1m, 3m, 6m, 1y, all]
+            enum: [1d, 1w, 1m, 3m, 6m, 1y, all]
       responses:
         "200":
           description: Growth chart data

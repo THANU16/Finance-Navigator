@@ -137,7 +137,7 @@ router.get("/growth", async (req, res): Promise<void> => {
 
   // Filter by period
   const now = new Date();
-  const periodMap: Record<string, number> = { "1m": 30, "3m": 90, "6m": 180, "1y": 365 };
+  const periodMap: Record<string, number> = { "1d": 1, "1w": 7, "1m": 30, "3m": 90, "6m": 180, "1y": 365 };
   const days = periodMap[period] ?? 99999;
   const cutoff = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
   const filtered = period === "all" ? growthData : growthData.filter((d) => d.date >= cutoff);

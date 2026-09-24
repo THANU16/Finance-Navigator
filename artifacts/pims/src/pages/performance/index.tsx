@@ -6,10 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, Legend } from "recharts";
 import { TrendingUp, TrendingDown, Info } from "lucide-react";
+import { computePeriodReturn } from "@/lib/utils";
+import { PeriodReturnBadge } from "@/components/period-return-badge";
 
 export default function Performance() {
-  const [period, setPeriod] = useState<"1m" | "3m" | "6m" | "1y" | "all">("1y");
-  
+  const [period, setPeriod] = useState<"1d" | "1w" | "1m" | "3m" | "6m" | "1y" | "all">("1y");
+
   const { data: analytics, isLoading: isAnalyticsLoading } = useGetPerformanceAnalytics(
     { period },
     { query: { queryKey: getGetPerformanceAnalyticsQueryKey({ period }) } }
@@ -19,6 +21,8 @@ export default function Performance() {
     { period },
     { query: { queryKey: getGetGrowthChartQueryKey({ period }) } }
   );
+
+  const periodReturn = computePeriodReturn(growth);
 
   if (isAnalyticsLoading || isGrowthLoading) {
     return <PerformanceSkeleton />;
@@ -33,8 +37,10 @@ export default function Performance() {
           <h1 className="text-3xl font-bold tracking-tight">Performance</h1>
           <p className="text-muted-foreground">Analyze your portfolio's historical returns.</p>
         </div>
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as any)} className="w-[400px]">
-          <TabsList className="grid w-full grid-cols-5">
+        <Tabs value={period} onValueChange={(v) => setPeriod(v as any)} className="w-[520px]">
+          <TabsList className="grid w-full grid-cols-7">
+            <TabsTrigger value="1d" data-testid="tab-1d">1D</TabsTrigger>
+            <TabsTrigger value="1w" data-testid="tab-1w">1W</TabsTrigger>
             <TabsTrigger value="1m" data-testid="tab-1m">1M</TabsTrigger>
             <TabsTrigger value="3m" data-testid="tab-3m">3M</TabsTrigger>
             <TabsTrigger value="6m" data-testid="tab-6m">6M</TabsTrigger>
@@ -119,9 +125,12 @@ export default function Performance() {
 
       <div className="grid gap-4 md:grid-cols-7 lg:grid-cols-7">
         <Card className="md:col-span-4 lg:col-span-5">
-          <CardHeader>
-            <CardTitle>Portfolio Growth</CardTitle>
-            <CardDescription>Value over time</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+            <div>
+              <CardTitle>Portfolio Growth</CardTitle>
+              <CardDescription>Value over time</CardDescription>
+            </div>
+            <PeriodReturnBadge periodReturn={periodReturn} />
           </CardHeader>
           <CardContent className="h-[420px]">
             {growth && growth.length > 0 ? (
@@ -154,12 +163,11 @@ export default function Performance() {
                     tickLine={false} axisLine={false} width={70}
                   />
                   <Tooltip
-                    formatter={(value: number, name: string) => [formatCurrency(value), name === "totalValue" ? "Portfolio Value" : "Amount Invested"]}
+                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
                     labelFormatter={label => new Date(label).toLocaleDateString()}
                     contentStyle={{ backgroundColor: "hsl(var(--card))", borderColor: "hsl(var(--border))", borderRadius: "8px", fontSize: 13 }}
                   />
                   <Legend
-                    formatter={v => v === "totalValue" ? "Portfolio Value" : "Amount Invested"}
                     wrapperStyle={{ fontSize: 13, paddingTop: 8 }}
                   />
                   <Area type="monotone" dataKey="totalValue" name="Portfolio Value" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorValue)" strokeWidth={2.5} dot={false} />

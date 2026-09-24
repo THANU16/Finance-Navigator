@@ -87,7 +87,11 @@ export const ResetPasswordResponse = zod.object({
  */
 export const GetDashboardSummaryResponse = zod.object({
   totalValue: zod.number(),
-  investedValue: zod.number(),
+  investedValue: zod.object({
+    assets: zod.number().optional(),
+    cash: zod.number().optional(),
+    required: zod.unknown().optional(),
+  }),
   profitLoss: zod.number(),
   profitLossPercent: zod.number(),
   monthlyReturn: zod.number(),
@@ -738,7 +742,7 @@ export const UpdateSettingsResponse = zod.object({
  * @summary Get performance analytics
  */
 export const GetPerformanceAnalyticsQueryParams = zod.object({
-  period: zod.enum(["1m", "3m", "6m", "1y", "all"]).optional(),
+  period: zod.enum(["1d", "1w", "1m", "3m", "6m", "1y", "all"]).optional(),
 });
 
 export const GetPerformanceAnalyticsResponse = zod.object({
@@ -765,7 +769,7 @@ export const GetPerformanceAnalyticsResponse = zod.object({
  * @summary Get portfolio growth chart data
  */
 export const GetGrowthChartQueryParams = zod.object({
-  period: zod.enum(["1m", "3m", "6m", "1y", "all"]).optional(),
+  period: zod.enum(["1d", "1w", "1m", "3m", "6m", "1y", "all"]).optional(),
 });
 
 export const GetGrowthChartResponseItem = zod.object({
